@@ -207,9 +207,9 @@ def menu():
 
     while True:
         print(f"\n{" Menu ":=^50}")
-        print("1. Add mods from Steam Workshop collection.")
-        print("2. list db uwu")
-        print("3. drop tables :O")
+        print("1. Add mods from Steam Workshop collection")
+        print("2. List installed mods")
+        print("3. Delete all mods")
         print("4. Exit\n")
 
         choice = input("Enter your choice: \n")
@@ -217,6 +217,7 @@ def menu():
         if choice == "1":
             url = input("Enter your Steam Workshop collection URL.\n")
             get_mods_from_collection(url)
+
         elif choice == "2":
             # Connect to database
             conn = sqlite3.connect('mod_database.db')
