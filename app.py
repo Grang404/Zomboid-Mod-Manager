@@ -1,12 +1,22 @@
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import (
+    Flask,
+    render_template,
+    jsonify,
+    request,
+    send_from_directory,
+    redirect,
+    url_for,
+)
 import sqlite3
 import os
+from mod_manager import ModManager
 
+mod_manager = ModManager()
 app = Flask(__name__)
 
 
 def get_db_connection():
-    conn = sqlite3.connect("mod_database.db")
+    conn = sqlite3.connect(mod_manager.db_name)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -79,6 +89,13 @@ def update_mods():
 
     finally:
         conn.close()
+
+
+@app.route("/process_url", methods=["POST"])
+def process_url():
+    url = request.form["url"]
+    mod_manager.get_mods_from_collection(url)
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":

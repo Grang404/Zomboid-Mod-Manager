@@ -4,14 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Project Zomboid Mod Manager</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <script src="/static/script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.auto-scroll.min.js"></script>
   </head>
   <body>
     <div class="container">
       <div class="header">
         <h1>Project Zomboid Mod Manager</h1>
+
+        <button id="addCollection">Add Collection</button>
+
+        <!-- Overlay (hidden by default) -->
+        <div id="overlay"></div>
+
+        <!-- Dialog Box -->
+        <div id="dialogBox">
+          <span class="close-btn">&times;</span>
+          <!-- Close button -->
+          <form id="urlForm" action="/process_url" method="POST">
+            <label for="urlInput">Enter Steam Workshop Collection URL:</label>
+            <input type="text" id="urlInput" name="url" required />
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+
         <button class="save-button" onclick="saveMods()">Save Changes</button>
       </div>
 
@@ -19,5 +39,7 @@
         <!-- Mods will be inserted here by JavaScript -->
       </div>
     </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
   </body>
 </html>
