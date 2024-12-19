@@ -5,3 +5,4 @@ server_config_path.txt
 *.ini
 .venv
 getmodinfo.py
+*.db

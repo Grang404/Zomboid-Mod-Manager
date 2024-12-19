@@ -2,7 +2,6 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import sqlite3
-from tabulate import tabulate
 
 
 def create_mod_db():
@@ -21,18 +20,19 @@ def create_mod_db():
     # Create table if it does not exist
     cursor.execute(
         """
-    CREATE TABLE IF NOT EXISTS mods (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        workshop_id TEXT UNIQUE,
-        title TEXT,
-        url TEXT,
-        mod_ids TEXT,
-        map_folders TEXT
-    )
-    """
+        CREATE TABLE IF NOT EXISTS mods (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workshop_id TEXT UNIQUE,
+            title TEXT,
+            url TEXT,
+            mod_ids TEXT,
+            map_folders TEXT,
+            load_order INTEGER,
+            enabled BOOLEAN DEFAULT 1
+        )
+        """
     )
 
-    # Commit and close connection
     conn.commit()
     conn.close()
 
@@ -68,11 +68,16 @@ def add_mod_to_database(workshop_id, title, url, mod_ids, map_folders):
     existing_mod = cursor.fetchone()
 
     if existing_mod:
-        print(
-            f"Mod with Workshop ID {
-              workshop_id} already exists in the database."
-        )
+        print(f"Mod with Workshop ID {workshop_id} already exists in the database.")
     else:
+        # Get the current maximum load_order
+        cursor.execute("SELECT MAX(load_order) FROM mods")
+        max_load_order = cursor.fetchone()[0]
+        if max_load_order is None:
+            max_load_order = 0
+        else:
+            max_load_order += 1
+
         # Insert the new item into the database
         print(
             f"Adding Mod into database...\n"
@@ -81,10 +86,20 @@ def add_mod_to_database(workshop_id, title, url, mod_ids, map_folders):
             f"Workshop ID: {workshop_id}\n"
             f"Mod IDs: {', '.join(mod_ids)}\n"
             f"Map Folders: {', '.join(map_folders)}\n"
+            f"Load Order: {max_load_order}\n"
+            f"Enabled: True\n"
         )
         cursor.execute(
-            "INSERT INTO mods (workshop_id, title, url, mod_ids, map_folders) VALUES (?, ?, ?, ?, ?)",
-            (workshop_id, title, url, ", ".join(mod_ids), ", ".join(map_folders)),
+            "INSERT INTO mods (workshop_id, title, url, mod_ids, map_folders, load_order, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                workshop_id,
+                title,
+                url,
+                ", ".join(mod_ids),
+                ", ".join(map_folders),
+                max_load_order,
+                True,
+            ),
         )
 
     conn.commit()
