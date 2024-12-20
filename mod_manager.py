@@ -1,4 +1,3 @@
-import os
 import requests
 from bs4 import BeautifulSoup
 import sqlite3
@@ -9,6 +8,7 @@ class ModManager:
         self.db_name = db_name
         self.server_path = None
         self.create_mod_db()
+        self.create_settings_table()
 
     def create_mod_db(self):
         """Initialize the SQLite database with the mods table."""
@@ -33,33 +33,22 @@ class ModManager:
         conn.commit()
         conn.close()
 
-    def set_server_path(self, path=None):
-        """Set the server.ini path either from parameter or user input."""
-        if path and os.path.exists(path):
-            self.server_path = path
-            with open("server_config_path.txt", "w") as file:
-                file.write(path)
-            return path
+    def create_settings_table(self):
+        """Create the settings table if it does not exist."""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
 
-        while True:
-            if os.path.exists("server_config_path.txt"):
-                with open("server_config_path.txt", "r") as file:
-                    server_path = file.read().strip()
-                    if os.path.exists(server_path):
-                        self.server_path = server_path
-                        return server_path
-                    else:
-                        print("Invalid server path found in server_config_path.txt.")
-                        os.remove("server_config_path.txt")
-            else:
-                server_path = input("Enter the path to your server.ini: \n")
-                if os.path.exists(server_path):
-                    with open("server_config_path.txt", "w") as file:
-                        file.write(server_path)
-                    self.server_path = server_path
-                    return server_path
-                else:
-                    print("Invalid path. Please enter a valid path.")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+            """
+        )
+
+        conn.commit()
+        conn.close()
 
     def add_mod_to_database(self, workshop_id, title, url, mod_ids, map_folders):
         """Add a mod to the database with its details."""
@@ -72,10 +61,6 @@ class ModManager:
         if existing_mod:
             print(f"Mod with Workshop ID {workshop_id} already exists in the database.")
         else:
-            cursor.execute("SELECT MAX(load_order) FROM mods")
-            max_load_order = cursor.fetchone()[0]
-            max_load_order = 0 if max_load_order is None else max_load_order + 1
-
             print(
                 f"Adding Mod into database...\n"
                 f"URL: {url}\n"
@@ -83,10 +68,10 @@ class ModManager:
                 f"Workshop ID: {workshop_id}\n"
                 f"Mod IDs: {', '.join(mod_ids)}\n"
                 f"Map Folders: {', '.join(map_folders)}\n"
-                f"Load Order: {max_load_order}\n"
                 f"Enabled: True\n"
             )
 
+            # Insert the mod, using the primary key `id` as the `load_order`
             cursor.execute(
                 "INSERT INTO mods (workshop_id, title, url, mod_ids, map_folders, load_order, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -95,9 +80,16 @@ class ModManager:
                     url,
                     ", ".join(mod_ids),
                     ", ".join(map_folders),
-                    max_load_order,
+                    None,  # We will let SQLite assign the id, and use that as load_order
                     True,
                 ),
+            )
+
+            # After the insertion, update the `load_order` to be the same as the `id`
+            last_inserted_id = cursor.lastrowid
+            cursor.execute(
+                "UPDATE mods SET load_order = ? WHERE id = ?",
+                (last_inserted_id, last_inserted_id),
             )
 
         conn.commit()

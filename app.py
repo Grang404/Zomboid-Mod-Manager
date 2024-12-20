@@ -35,12 +35,9 @@ def send_static(path):
 def get_mods():
     conn = get_db_connection()
     cursor = conn.cursor()
-
     try:
         cursor.execute("SELECT * FROM mods ORDER BY load_order")
         mods = cursor.fetchall()
-
-        # Convert rows to dictionaries
         mods_list = []
         for mod in mods:
             mods_list.append(
@@ -49,14 +46,12 @@ def get_mods():
                     "workshop_id": mod["workshop_id"],
                     "title": mod["title"],
                     "enabled": bool(mod["enabled"]),
+                    "load_order": mod["load_order"],
                 }
             )
-
         return jsonify(mods_list)
-
     except sqlite3.Error as e:
         return jsonify({"error": str(e)}), 500
-
     finally:
         conn.close()
 
@@ -65,11 +60,8 @@ def get_mods():
 def update_mods():
     conn = get_db_connection()
     cursor = conn.cursor()
-
     try:
         mods = request.json
-
-        # Update each mod's load order and enabled status
         for mod in mods:
             cursor.execute(
                 """
@@ -79,14 +71,11 @@ def update_mods():
             """,
                 (mod["load_order"], mod["enabled"], mod["id"]),
             )
-
         conn.commit()
         return jsonify({"message": "Changes saved successfully"})
-
     except sqlite3.Error as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
-
     finally:
         conn.close()
 
@@ -98,10 +87,23 @@ def process_url():
     return redirect(url_for("index"))
 
 
+@app.route("/api/mods/<int:id>", methods=["DELETE"])
+def delete_mod(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM mods WHERE id = ?", (id,))
+        conn.commit()
+        return jsonify({"message": "Mod deleted successfully!"}), 200
+    except sqlite3.Error as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
-    # Create necessary directories if they don't exist
     os.makedirs("static", exist_ok=True)
     os.makedirs("templates", exist_ok=True)
-
-    # Start the Flask app
+    print(app.url_map)
     app.run(debug=True)
