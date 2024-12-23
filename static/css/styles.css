@@ -101,6 +101,22 @@ body {
 	transition: background-color 0.2s;
 }
 
+.mod-item.moving {
+	display: flex;
+	align-items: center;
+	padding: 12px;
+	background: white;
+	border-bottom: 1px solid #e0e0e0;
+	transition: background-color 0.2s, opacity 0.3s ease, transform 0.3s ease;
+	opacity: 1;
+}
+
+.mod-item.deleting {
+	opacity: 0;
+	background-color: #ffebee;
+	transform: translateX(100px);
+}
+
 .mod-controls {
 	display: flex;
 	gap: 4px;
@@ -134,6 +150,10 @@ body {
 
 .icon-button:hover {
 	background-color: #f0f0f0;
+}
+
+.icon-button.delete-mod:hover {
+	color: red;
 }
 
 .save-button {

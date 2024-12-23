@@ -359,29 +359,47 @@ function addMods() {
 // Add click handler to the Add Mod button
 document.getElementById("addMod").addEventListener("click", addMods);
 
-// TODO: Only delete mod on the front end and then delete any deleted mods from the db with the save button
 function deleteMod(index) {
-  const modId = mods[index].id; // Get the ID of the mod to be deleted
+  const modId = mods[index].id;
 
   if (confirm("Are you sure you want to delete this mod?")) {
-    // Send a DELETE request to the Flask API
-    fetch(`/api/mods/${modId}`, {
-      method: "DELETE",
-    })
-      .then((response) => {
-        if (response.ok) {
-          alert("Mod deleted successfully! ;3");
-          mods.splice(index, 1);
-          renderMods();
-          saveMods();
-        } else {
-          throw new Error("Failed to delete mod");
-        }
+    // Find the DOM element for this mod
+    const modElement = document.querySelector(`.mod-item[data-id="${modId}"]`);
+
+    // Add the deleting class to start the animation
+    modElement.classList.add("moving");
+
+    modElement.classList.add("deleting");
+
+    // Wait for animation to complete before making the API call
+    setTimeout(() => {
+      fetch(`/api/mods/${modId}`, {
+        method: "DELETE",
       })
-      .catch((error) => {
-        console.error("Error deleting mod:", error);
-        alert("Error deleting mod. Please check the console for details.");
-      });
+        .then((response) => {
+          if (response.ok) {
+            // Remove the mod from the array
+            mods.splice(index, 1);
+
+            // Update load_order for all remaining mods
+            mods.forEach((mod, index) => {
+              mod.load_order = index + 1;
+            });
+
+            saveMods();
+            renderMods();
+          } else {
+            throw new Error("Failed to delete mod");
+          }
+        })
+        .catch((error) => {
+          console.error("Error deleting mod:", error);
+          alert("Error deleting mod. Please check the console for details.");
+          // Remove the deleting class if there's an error
+          modElement.classList.remove("moving");
+          modElement.classList.remove("deleting");
+        });
+    }, 300); // Match this to your CSS transition duration
   }
 }
 
