@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Project Zomboid Mod Manager</title>
+    <title>PZ Dedicated Server Mod Manager</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
@@ -14,17 +14,23 @@
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   </head>
-  <body class="zone">
+  <body>
     <div class="container">
       <div class="header">
-        <h1>Project Zomboid Mod Manager</h1>
+        <h1>PZ Dedicated Server Mod Manager</h1>
+      </div>
+      <div class="button-container">
+        <button id="addCollection" class="styled-button">Add Mod(s)</button>
+        <button
+          class="styled-button"
+          id="update_config"
+          onclick="updateConfig()"
+        >
+          Update Config
+        </button>
 
         <span class="material-symbols-outlined" id="warning-icon">warning</span>
         <div id="tooltip" class="tooltip"></div>
-        <button id="addCollection">Add Mod(s)</button>
-        <button class="item" id="update_config" onclick="updateConfig()">
-          Update Config
-        </button>
       </div>
 
       <div class="mod-list" id="modList">
