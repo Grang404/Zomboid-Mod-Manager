@@ -30,7 +30,6 @@
         </button>
 
         <span class="material-symbols-outlined" id="warning-icon">warning</span>
-        <div id="tooltip" class="tooltip"></div>
       </div>
 
       <div class="mod-list" id="modList">
@@ -72,6 +71,18 @@
         </div>
       </div>
     </div>
+
+    <!-- Config Modal -->
+    <div id="modIdsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Mods with missing Mod ID's</h2>
+          <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body"></div>
+      </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </body>
 </html>

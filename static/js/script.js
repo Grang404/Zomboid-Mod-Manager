@@ -23,7 +23,6 @@ async function checkMissingModID() {
 
     // Filter mods that don't have a valid mod_id (checking for null, undefined, or empty string)
     const missingModIDs = mods.filter((mod) => {
-      // Convert mod.id to string before calling .trim()
       const modId = String(mod.mod_ids); // Ensure modId is a string
       console.log(`Checking mod.mod_ids for mod "${mod.title}":`, modId); // Debug log
 
@@ -31,21 +30,47 @@ async function checkMissingModID() {
       return !modId || modId.trim() === ""; // Handles null, undefined, and empty strings
     });
 
-    const tooltip = document.getElementById("tooltip");
-
-    if (missingModIDs.length > 0) {
-      const modList = missingModIDs
-        .map((mod) => `<p>Mod Title: ${mod.title}</p>`)
-        .join("");
-      tooltip.innerHTML = `<strong>Mods Missing ID:</strong><br>${modList}`;
-    } else {
-      tooltip.innerHTML = "All mods have mod IDs.";
-    }
+    // When warning icon is clicked, open the modal with missing mod ids
+    const warningIcon = document.getElementById("warning-icon");
+    warningIcon.addEventListener("click", () => {
+      if (missingModIDs.length > 0) {
+        openConfigModal(missingModIDs);
+      }
+    });
   } catch (error) {
     console.error("Error checking missing mod_id:", error);
     alert("Error checking mods. Please check the console for details.");
   }
 }
+
+function openConfigModal(missingModIDs) {
+  const modal = document.getElementById("modIdsModal");
+  const modalBody = modal.querySelector(".modal-body");
+
+  // Create the list of missing mod IDs for the modal
+  const modList = missingModIDs.map((mod) => `<p>${mod.title}</p>`).join("");
+
+  modalBody.innerHTML = `${modList}`;
+
+  // Show the modal
+  modal.style.display = "block";
+
+  // Close the modal when the close button is clicked
+  const closeModal = modal.querySelector(".close-modal");
+  closeModal.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+
+  // Close the modal if the user clicks outside of it
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  });
+}
+
+// Call checkMissingModID to run the function
+checkMissingModID();
 
 // Add event listener to the warning icon
 document
