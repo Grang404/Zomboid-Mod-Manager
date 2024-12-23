@@ -82,7 +82,7 @@ async function checkMissingModID() {
     alert("Error checking mods. Please check the console for details.");
   }
 }
-
+// TODO: add update for mod index
 function moveToTop(index) {
   const item = mods[index];
   mods.splice(index, 1);
