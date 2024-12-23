@@ -46,9 +46,43 @@ class ModManager:
             )
             """
         )
+        conn.commit()
+        conn.close()
+
+    def save_server_ini(self, ini_content):
+        """Save the server.ini content to the settings table."""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+
+        # Insert or update the server.ini content in the settings table
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO settings (key, value)
+            VALUES ('server_ini', ?)
+            """,
+            (ini_content,),
+        )
 
         conn.commit()
         conn.close()
+
+    def get_server_ini(self):
+        """Retrieve the server.ini content from the settings table."""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT value FROM settings WHERE key = 'server_ini'
+            """
+        )
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            return result[0]
+        else:
+            return None  # Return None if no server.ini is found
 
     def add_mod_to_database(self, workshop_id, title, url, mod_ids, map_folders):
         """Add a mod to the database with its details."""
@@ -176,14 +210,20 @@ class ModManager:
 
             self.add_mod_to_database(workshop_id, mod_title, url, mod_ids, map_folders)
 
-    def add_mods_to_config(self):
-        """Update the server.ini file with mod information."""
-        if not self.server_path:
-            self.set_server_path()
-
+    def add_mods_to_config(self, config_content):
+        """Update the config content with mod information."""
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
-        cursor.execute("SELECT workshop_id, mod_ids, map_folders FROM mods")
+
+        # Get mods ordered by load_order
+        cursor.execute(
+            """
+            SELECT workshop_id, mod_ids, map_folders 
+            FROM mods 
+            WHERE enabled = 1
+            ORDER BY load_order
+        """
+        )
         rows = cursor.fetchall()
         conn.close()
 
@@ -191,15 +231,14 @@ class ModManager:
         all_mod_names = []
         all_map_names = []
 
+        # Process mods in load order
         for row in rows:
             workshop_id, mod_ids_str, map_folders_str = row
-
             if mod_ids_str:
                 for mod_group in mod_ids_str.split(";;"):
                     all_mod_names.extend(
                         [mod.strip() for mod in mod_group.split(",") if mod.strip()]
                     )
-
             if map_folders_str:
                 for map_group in map_folders_str.split(";;"):
                     all_map_names.extend(
@@ -209,7 +248,6 @@ class ModManager:
                             if map_name.strip()
                         ]
                     )
-
             if workshop_id:
                 workshop_ids.append(workshop_id)
 
@@ -217,23 +255,28 @@ class ModManager:
         mod_names_string = ";".join(all_mod_names)
         map_names_string = ";".join(all_map_names)
 
-        with open(self.server_path, "r") as file:
-            lines = file.readlines()
+        # Process the config content line by line
+        lines = config_content.splitlines()
+        new_lines = []
 
-        for i, line in enumerate(lines):
+        for line in lines:
             if line.startswith("WorkshopItems="):
-                lines[i] = f"WorkshopItems={workshop_ids_string}\n"
+                new_lines.append(f"WorkshopItems={workshop_ids_string}")
             elif line.startswith("Mods="):
-                lines[i] = f"Mods={mod_names_string}\n"
+                new_lines.append(f"Mods={mod_names_string}")
             elif line.startswith("Map="):
-                lines[i] = f"Map={map_names_string}\n"
+                new_lines.append(f"Map={map_names_string}")
+            else:
+                new_lines.append(line)
 
-        with open(self.server_path, "w") as file:
-            file.writelines(lines)
+        # Join lines with newline and add a final newline
+        processed_content = "\n".join(new_lines) + "\n"
 
         print(f"Updated WorkshopItems with {len(workshop_ids)} workshop IDs")
         print(f"Updated Mods with {len(all_mod_names)} mod names")
         print(f"Updated Map with {len(all_map_names)} map names")
+
+        return processed_content
 
     def list_mods(self):
         """List all mods in the database."""

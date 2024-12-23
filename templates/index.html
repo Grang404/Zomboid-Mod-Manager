@@ -6,37 +6,25 @@
     <title>Project Zomboid Mod Manager</title>
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='styles.css') }}"
+      href="{{ url_for('static', filename='css/styles.css') }}"
     />
     <link
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
       rel="stylesheet"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.auto-scroll.min.js"></script>
   </head>
-  <body>
+  <body class="zone">
     <div class="container">
       <div class="header">
         <h1>Project Zomboid Mod Manager</h1>
 
-        <button id="addCollection">Add Collection</button>
-
-        <!-- Overlay (hidden by default) -->
-        <div id="overlay"></div>
-
-        <!-- Dialog Box -->
-        <div id="dialogBox">
-          <span class="close-btn">&times;</span>
-          <!-- Close button -->
-          <form id="urlForm" action="/process_url" method="POST">
-            <label for="urlInput">Enter Steam Workshop Collection URL:</label>
-            <input type="text" id="urlInput" name="url" required />
-            <button type="submit">Submit</button>
-          </form>
-        </div>
-
-        <button class="save-button" onclick="saveMods()">Save Changes</button>
+        <span class="material-symbols-outlined" id="warning-icon">warning</span>
+        <div id="tooltip" class="tooltip"></div>
+        <button id="addCollection">Add Mod(s)</button>
+        <button class="item" id="update_config" onclick="updateConfig()">
+          Update Config
+        </button>
       </div>
 
       <div class="mod-list" id="modList">
@@ -44,6 +32,40 @@
       </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- Config Modal -->
+    <div id="configModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Update Configuration</h2>
+          <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="file-upload-container">
+            <div class="file-upload-area" id="dropZone">
+              <span class="material-symbols-outlined upload-icon"
+                >upload_file</span
+              >
+              <p>Click to upload or drag and drop</p>
+              <span class="file-name" id="fileName">No file selected</span>
+              <input type="file" id="fileUpload" class="file-input" />
+            </div>
+          </div>
+
+          <div class="divider">
+            <span>OR</span>
+          </div>
+
+          <textarea
+            id="configTextarea"
+            placeholder="Enter your configuration here..."
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-button cancel">Cancel</button>
+          <button class="modal-button save">Process Config</button>
+        </div>
+      </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </body>
 </html>

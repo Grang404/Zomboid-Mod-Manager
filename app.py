@@ -6,10 +6,12 @@ from flask import (
     send_from_directory,
     redirect,
     url_for,
+    send_file,
 )
 import sqlite3
 import os
 from mod_manager import ModManager
+from io import BytesIO
 
 mod_manager = ModManager()
 app = Flask(__name__)
@@ -45,6 +47,7 @@ def get_mods():
                     "id": mod["id"],
                     "workshop_id": mod["workshop_id"],
                     "title": mod["title"],
+                    "mod_ids": mod["mod_ids"],
                     "enabled": bool(mod["enabled"]),
                     "load_order": mod["load_order"],
                 }
@@ -80,13 +83,6 @@ def update_mods():
         conn.close()
 
 
-@app.route("/process_url", methods=["POST"])
-def process_url():
-    url = request.form["url"]
-    mod_manager.get_mods_from_collection(url)
-    return redirect(url_for("index"))
-
-
 @app.route("/api/mods/<int:id>", methods=["DELETE"])
 def delete_mod(id):
     conn = get_db_connection()
@@ -100,6 +96,67 @@ def delete_mod(id):
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+
+@app.route("/api/save_server_config", methods=["POST"])
+def save_server_ini():
+    data = request.get_json()
+    server_ini_content = data.get("server_ini")
+
+    if server_ini_content:
+        mod_manager.save_server_ini(server_ini_content)  # Save server.ini content
+        return jsonify({"message": "Server.ini saved successfully!"}), 200
+    else:
+        return jsonify({"error": "No server.ini content provided."}), 400
+
+
+@app.route("/api/get_server_ini", methods=["GET"])
+def get_server_ini():
+    server_ini_content = (
+        mod_manager.get_server_ini()
+    )  # Retrieve saved server.ini content
+
+    if server_ini_content:
+        return jsonify({"server_ini": server_ini_content}), 200
+    else:
+        return jsonify({"message": "No server.ini found."}), 404
+
+
+@app.route("/api/process_config", methods=["POST"])
+def process_config():
+    if "config_file" not in request.files:
+        return "No file uploaded", 400
+
+    file = request.files["config_file"]
+    if file.filename == "":
+        return "No file selected", 400
+
+    try:
+        # Read the uploaded file content
+        file_content = file.read().decode("utf-8")
+
+        # Process the file using mod_manager
+        mod_manager = ModManager()
+        processed_content = mod_manager.add_mods_to_config(file_content)
+
+        # Create BytesIO object for the processed content
+        mem = BytesIO()
+        mem.write(processed_content.encode("utf-8"))
+        mem.seek(0)
+
+        return send_file(
+            mem, as_attachment=True, download_name="server.ini", mimetype="text/plain"
+        )
+
+    except Exception as e:
+        return str(e), 500
+
+
+@app.route("/process_url", methods=["POST"])
+def process_url():
+    url = request.form["url"]
+    mod_manager.get_mods_from_collection(url)
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
