@@ -152,11 +152,22 @@ def process_config():
         return str(e), 500
 
 
-@app.route("/process_url", methods=["POST"])
-def process_url():
-    url = request.form["url"]
-    mod_manager.get_mods_from_collection(url)
-    return redirect(url_for("index"))
+@app.route("/get_mods_from_url", methods=["POST"])
+def get_mods_from_url():
+    try:
+        data = request.get_json()
+        url = data.get("url")
+
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+
+        # Call your mod manager function
+        mods = mod_manager.get_mods_from_collection(url)
+
+        return jsonify({"success": True, "mods": mods})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

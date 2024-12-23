@@ -13,6 +13,34 @@ async function loadMods() {
   }
 }
 
+// Trigger the modal after saving mods (in saveMods function)
+async function saveMods() {
+  const modOrder = Array.from(document.querySelectorAll(".mod-item")).map(
+    (item, index) => ({
+      id: parseInt(item.dataset.id),
+      enabled: item.querySelector(".mod-checkbox").checked,
+      load_order: index + 1,
+    }),
+  );
+  // TODO: Change alert(), kinda ugly
+  try {
+    const response = await fetch("/api/mods", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(modOrder),
+    });
+
+    if (response.ok) {
+      console.log("mods saved");
+    } else {
+      throw new Error("Failed to save changes");
+    }
+  } catch (error) {
+    console.error("Error saving changes:", error);
+    alert("Error saving changes. Please check the console for details.");
+  }
+}
+
 async function checkMissingModID() {
   try {
     const response = await fetch("/api/mods");
@@ -54,8 +82,6 @@ async function checkMissingModID() {
     alert("Error checking mods. Please check the console for details.");
   }
 }
-
-checkMissingModID();
 
 function moveToTop(index) {
   const item = mods[index];
@@ -153,34 +179,6 @@ function toggleMod(index) {
   mods[index].enabled = !mods[index].enabled;
 }
 
-// Trigger the modal after saving mods (in saveMods function)
-async function saveMods() {
-  const modOrder = Array.from(document.querySelectorAll(".mod-item")).map(
-    (item, index) => ({
-      id: parseInt(item.dataset.id),
-      enabled: item.querySelector(".mod-checkbox").checked,
-      load_order: index + 1,
-    }),
-  );
-  // TODO: Change alert(), kinda ugly
-  try {
-    const response = await fetch("/api/mods", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(modOrder),
-    });
-
-    if (response.ok) {
-      console.log("mods saved");
-    } else {
-      throw new Error("Failed to save changes");
-    }
-  } catch (error) {
-    console.error("Error saving changes:", error);
-    alert("Error saving changes. Please check the console for details.");
-  }
-}
-
 function updateConfig() {
   const modal = document.getElementById("configModal");
   const closeBtn = modal.querySelector(".close-modal");
@@ -220,7 +218,7 @@ function updateConfig() {
     }
   };
 
-  // Save/Process button handling
+  // Process button handling
   saveBtn.onclick = async function () {
     const file = fileUpload.files[0];
     if (!file) {
@@ -288,58 +286,78 @@ function updateConfig() {
     }
   };
 }
-// Save server.ini content
-async function saveServerIni() {
-  const file = document.getElementById("fileUpload").files[0];
-  const content = document.getElementById("iniContent").value;
-  let iniData = content;
 
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      iniData = reader.result;
-      await sendServerIniToServer(iniData);
-    };
-    reader.readAsText(file);
-  } else {
-    await sendServerIniToServer(iniData);
+function addMods() {
+  const modal = document.getElementById("addModsModal");
+  const closeBtn = modal.querySelector(".close-modal");
+  const cancelBtn = modal.querySelector(".modal-button.cancel");
+  const saveBtn = modal.querySelector(".modal-button.save");
+  const urlInput = document.getElementById("modUrl");
+  const spinner = document.getElementById("loadingSpinner");
+
+  // Show modal
+  modal.style.display = "block";
+
+  // Close modal functions
+  function closeModal() {
+    modal.style.display = "none";
+    urlInput.value = ""; // Clear input when closing
+    spinner.style.display = "none"; // Hide spinner when closing
   }
-}
 
-async function sendServerIniToServer(iniData) {
-  const response = await fetch("/api/save_server_config", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ server_ini: iniData }),
-  });
+  // Close button event
+  closeBtn.onclick = closeModal;
+  cancelBtn.onclick = closeModal;
 
-  if (response.ok) {
-    alert("Server.ini saved successfully! ;3");
-    document.getElementById("serverIniModal").style.display = "none"; // Close modal
-    window.location.reload(); // Reload the page to reflect changes
-  } else {
-    alert("Error saving server.ini.");
-  }
-}
+  // Close modal when clicking outside
+  window.onclick = function (event) {
+    if (event.target === modal) {
+      closeModal();
+    }
+  };
 
-// Use default server.ini
-function useDefaultIni() {
-  fetch("/api/save_server_config", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ server_ini: "default_server_ini_content_here" }), // Default content
-  })
-    .then((response) => {
-      if (response.ok) {
-        alert("Default server.ini applied successfully! ;3");
-        document.getElementById("serverIniModal").style.display = "none"; // Close modal
-        window.location.reload(); // Reload the page to reflect changes
+  // Process button handling
+  saveBtn.onclick = async function () {
+    const url = urlInput.value.trim();
+
+    if (!url) {
+      alert("Please enter a valid URL");
+      return;
+    }
+
+    try {
+      // Show spinner and disable save button
+      spinner.style.display = "block";
+      saveBtn.disabled = true;
+
+      const response = await fetch("/get_mods_from_url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: url }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    })
-    .catch((error) => {
-      alert("Error applying default server.ini.");
-    });
+
+      const data = await response.json();
+      console.log("Mods retrieved successfully:", data);
+      closeModal();
+    } catch (error) {
+      console.error("Error processing mods:", error);
+      alert("Error processing mods. Please try again.");
+    } finally {
+      // Hide spinner and re-enable save button
+      spinner.style.display = "none";
+      saveBtn.disabled = false;
+    }
+  };
 }
+
+// Add click handler to the Add Mod button
+document.getElementById("addMod").addEventListener("click", addMods);
 
 // TODO: Only delete mod on the front end and then delete any deleted mods from the db with the save button
 function deleteMod(index) {
@@ -367,29 +385,5 @@ function deleteMod(index) {
   }
 }
 
-async function fetchServerIni() {
-  try {
-    const response = await fetch("/api/get_server_ini");
-    const data = await response.json();
-
-    if (response.ok) {
-      document.getElementById("serverIniContent").textContent = data.server_ini;
-    } else {
-      alert(data.message || "Error retrieving server.ini.");
-    }
-  } catch (error) {
-    console.error("Error fetching server.ini:", error);
-    alert("Error fetching server.ini.");
-  }
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-  document
-    .getElementById("addCollection")
-    .addEventListener("click", function () {
-      document.getElementById("dialogBox").style.display = "block";
-      document.getElementById("overlay").style.display = "block";
-    });
-
-  loadMods();
-});
+checkMissingModID();
+loadMods();

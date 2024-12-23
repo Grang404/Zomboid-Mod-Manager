@@ -20,7 +20,7 @@
         <h1>PZ Dedicated Server Mod Manager</h1>
       </div>
       <div class="button-container">
-        <button id="addCollection" class="styled-button">Add Mod(s)</button>
+        <button id="addMod" class="styled-button">Add Mod(s)</button>
         <button
           class="styled-button"
           id="update_config"
@@ -72,7 +72,7 @@
       </div>
     </div>
 
-    <!-- Config Modal -->
+    <!-- Missing Mod IDs Modal-->
     <div id="modIdsModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -83,6 +83,45 @@
       </div>
     </div>
 
+    <!-- Add Mods Modal -->
+    <div id="addModsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Add Mod(s)</h2>
+          <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label for="modUrl">Mod URL:</label>
+            <input
+              type="url"
+              id="modUrl"
+              name="modUrl"
+              placeholder="Paste mod URL here..."
+              class="url-input"
+              required
+            />
+          </div>
+
+          <div
+            id="loadingSpinner"
+            class="spinner-container"
+            style="display: none"
+          >
+            <div class="fancy-spinner">
+              <div class="ring outer"></div>
+              <div class="ring inner"></div>
+              <div class="ring center"></div>
+            </div>
+            <p class="loading-text">Processing mods...</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-button cancel">Cancel</button>
+          <button class="modal-button save">Process Config</button>
+        </div>
+      </div>
+    </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </body>
 </html>
