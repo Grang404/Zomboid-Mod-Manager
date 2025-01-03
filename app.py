@@ -170,6 +170,14 @@ def get_mods_from_url():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/get_mods_config")
+def get_mods_config():
+    """Fetch the config content for mods."""
+    config_content = mod_manager.get_mods_config()
+
+    return jsonify({"config_content": config_content})
+
+
 if __name__ == "__main__":
     os.makedirs("static", exist_ok=True)
     os.makedirs("templates", exist_ok=True)

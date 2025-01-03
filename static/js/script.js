@@ -403,5 +403,24 @@ function deleteMod(index) {
   }
 }
 
+document.getElementById("copyButton").addEventListener("click", function () {
+  const textarea = document.getElementById("configTextarea");
+  textarea.select();
+  document.execCommand("copy");
+  console.log("copied text"); // Debug log
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  fetch("/get_mods_config")
+    .then((response) => response.json())
+    .then((data) => {
+      const configContent = data.config_content;
+      document.getElementById("configTextarea").value = configContent;
+    })
+    .catch((error) => {
+      console.error("Error fetching config content:", error);
+    });
+});
+
 checkMissingModID();
 loadMods();

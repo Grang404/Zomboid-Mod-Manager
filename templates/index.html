@@ -60,10 +60,16 @@
             <span>OR</span>
           </div>
 
-          <textarea
-            id="configTextarea"
-            placeholder="Enter your configuration here..."
-          ></textarea>
+          <div class="config-textarea-container">
+            <textarea
+              id="configTextarea"
+              readonly
+              placeholder="Mod Info"
+            ></textarea>
+            <button id="copyButton" class="copy-button">
+              <span class="material-symbols-outlined">content_copy</span>
+            </button>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="modal-button cancel">Cancel</button>

@@ -278,6 +278,65 @@ class ModManager:
 
         return processed_content
 
+    def get_mods_config(self):
+        """Generate config content for mods."""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+
+        # Get mods ordered by load_order
+        cursor.execute(
+            """
+            SELECT workshop_id, mod_ids, map_folders 
+            FROM mods 
+            WHERE enabled = 1
+            ORDER BY load_order
+            """
+        )
+        rows = cursor.fetchall()
+        conn.close()
+
+        workshop_ids = []
+        mod_names = []
+        map_names = []
+
+        # Process mods in load order
+        for row in rows:
+            workshop_id, mod_ids_str, map_folders_str = row
+
+            # Process mod_ids if available
+            if mod_ids_str:
+                for mod_group in mod_ids_str.split(";;"):
+                    mod_names.extend(
+                        [mod.strip() for mod in mod_group.split(",") if mod.strip()]
+                    )
+
+            # Process map_folders if available
+            if map_folders_str:
+                for map_group in map_folders_str.split(";;"):
+                    map_names.extend(
+                        [
+                            map_name.strip()
+                            for map_name in map_group.split(",")
+                            if map_name.strip()
+                        ]
+                    )
+
+            # Add workshop_id to list
+            if workshop_id:
+                workshop_ids.append(workshop_id)
+
+        # Format the values into strings
+        workshop_ids_string = ";".join(workshop_ids)
+        mod_names_string = ";".join(mod_names)
+        map_names_string = ";".join(map_names)
+
+        # Generate the final config content
+        config_content = f"WorkshopItems={workshop_ids_string}\n"
+        config_content += f"Mods={mod_names_string}\n"
+        config_content += f"Map={map_names_string}\n"
+
+        return config_content
+
     def list_mods(self):
         """List all mods in the database."""
         conn = sqlite3.connect(self.db_name)
