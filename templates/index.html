@@ -93,17 +93,33 @@
     <div id="addModsModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>Add Mod(s)</h2>
+          <h2>Add Mods</h2>
           <span class="close-modal">&times;</span>
         </div>
         <div class="modal-body">
           <div class="input-group">
-            <label for="modUrl">Mod URL:</label>
+            <label for="collectionUrl">Steam collection URL</label>
             <input
               type="url"
-              id="modUrl"
-              name="modUrl"
-              placeholder="Paste mod URL here..."
+              id="collectionUrl"
+              name="collectionUrl"
+              placeholder="Paste URL here..."
+              class="url-input"
+              required
+            />
+          </div>
+
+          <div class="divider">
+            <span>OR</span>
+          </div>
+
+          <div class="input-group">
+            <label for="workshopUrl">Workshop Mod URL</label>
+            <input
+              type="url"
+              id="workshopUrl"
+              name="workshopUrl"
+              placeholder="Paste URL here..."
               class="url-input"
               required
             />
@@ -124,7 +140,7 @@
         </div>
         <div class="modal-footer">
           <button class="modal-button cancel">Cancel</button>
-          <button class="modal-button save">Process Config</button>
+          <button class="modal-button save">Submit</button>
         </div>
       </div>
     </div>

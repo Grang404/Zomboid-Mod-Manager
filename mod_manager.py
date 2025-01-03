@@ -210,6 +210,16 @@ class ModManager:
 
             self.add_mod_to_database(workshop_id, mod_title, url, mod_ids, map_folders)
 
+    def get_mod_from_url(self, url):
+        """Process a single workshop URL"""
+
+        mod_title = self.get_mod_title(url)
+        mod_ids = self.get_mod_ids(url)
+        workshop_id = self.get_workshop_ids(url)
+        map_folders = self.get_mod_map_folders(url)
+
+        self.add_mod_to_database(workshop_id, mod_title, url, mod_ids, map_folders)
+
     def add_mods_to_config(self, config_content):
         """Update the config content with mod information."""
         conn = sqlite3.connect(self.db_name)

@@ -99,6 +99,12 @@ function moveToBottom(index) {
 
 function renderMods() {
   console.log("Rendering mods:", mods);
+
+  // Update load_order for all mods before rendering
+  mods.forEach((mod, index) => {
+    mod.load_order = index + 1; // Assign load_order based on the position
+  });
+
   const modList = document.getElementById("modList");
   modList.innerHTML = mods
     .map(
@@ -287,12 +293,13 @@ function updateConfig() {
   };
 }
 
-function addMods() {
+async function addMods() {
   const modal = document.getElementById("addModsModal");
   const closeBtn = modal.querySelector(".close-modal");
   const cancelBtn = modal.querySelector(".modal-button.cancel");
   const saveBtn = modal.querySelector(".modal-button.save");
-  const urlInput = document.getElementById("modUrl");
+  const collectionInput = document.getElementById("collectionUrl");
+  const workshopInput = document.getElementById("workshopUrl");
   const spinner = document.getElementById("loadingSpinner");
 
   // Show modal
@@ -301,7 +308,8 @@ function addMods() {
   // Close modal functions
   function closeModal() {
     modal.style.display = "none";
-    urlInput.value = ""; // Clear input when closing
+    collectionInput.value = "";
+    workshopInput.value = "";
     spinner.style.display = "none"; // Hide spinner when closing
   }
 
@@ -318,10 +326,16 @@ function addMods() {
 
   // Process button handling
   saveBtn.onclick = async function () {
-    const url = urlInput.value.trim();
+    const collectionInputUrl = collectionInput.value.trim();
+    const workshopInputUrl = workshopInput.value.trim();
 
-    if (!url) {
+    if (!collectionInputUrl && !workshopInputUrl) {
       alert("Please enter a valid URL");
+      return;
+    }
+
+    if (collectionInputUrl && workshopInputUrl) {
+      alert("Please enter only one field");
       return;
     }
 
@@ -330,20 +344,26 @@ function addMods() {
       spinner.style.display = "block";
       saveBtn.disabled = true;
 
+      const url = collectionInputUrl || workshopInputUrl;
+      const urlType = collectionInputUrl ? "collection" : "workshop";
+
       const response = await fetch("/get_mods_from_url", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url: url }),
+        body: JSON.stringify({
+          url: url,
+          type: urlType,
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log("Mods retrieved successfully:", data);
+      loadMods(); // Re-fetch mods and render them
+
       closeModal();
     } catch (error) {
       console.error("Error processing mods:", error);

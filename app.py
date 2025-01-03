@@ -156,13 +156,19 @@ def process_config():
 def get_mods_from_url():
     try:
         data = request.get_json()
-        url = data.get("url")
+        url = data["url"]
+        url_type = data["type"]
 
         if not url:
             return jsonify({"error": "URL is required"}), 400
 
-        # Call your mod manager function
-        mods = mod_manager.get_mods_from_collection(url)
+        if not url_type:
+            return jsonify({"error": "Both fields empty"}), 400
+
+        if url_type == "collection":
+            mods = mod_manager.get_mods_from_collection(url)
+        else:
+            mods = mod_manager.get_mod_from_url(url)
 
         return jsonify({"success": True, "mods": mods})
 
