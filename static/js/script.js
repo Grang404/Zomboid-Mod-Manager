@@ -303,6 +303,13 @@ function updateConfig() {
 
   // Process button handling
   saveBtn.onclick = async function () {
+    const missingModIDs = mods.filter(
+      (mod) => !mod.mod_ids || mod.mod_ids.trim() === "",
+    );
+
+    if (missingModIDs.length > 0) {
+      alert("Warning");
+    }
     const file = fileUpload.files[0];
     if (!file) {
       alert("Please select a file first");
