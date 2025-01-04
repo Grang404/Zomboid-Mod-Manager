@@ -5,7 +5,6 @@ async function loadMods() {
   try {
     const response = await fetch("/api/mods");
     mods = await response.json();
-    console.log("Loaded mods:", mods);
     renderMods();
   } catch (error) {
     console.error("Error loading mods:", error);
@@ -31,7 +30,6 @@ async function saveMods() {
     });
 
     if (response.ok) {
-      console.log("mods saved");
     } else {
       throw new Error("Failed to save changes");
     }
@@ -45,11 +43,9 @@ async function checkMissingModID() {
   try {
     const response = await fetch("/api/mods");
     const mods = await response.json();
-    console.log("Mods:", mods);
 
     const missingModIDs = mods.filter((mod) => {
       const modId = String(mod.mod_ids);
-      console.log(`Checking mod.mod_ids for mod "${mod.title}":`, modId);
       return !modId || modId.trim() === "";
     });
 
@@ -87,6 +83,7 @@ function moveToTop(index) {
   const item = mods[index];
   mods.splice(index, 1);
   mods.unshift(item);
+  saveMods();
   renderMods();
 }
 
@@ -94,12 +91,11 @@ function moveToBottom(index) {
   const item = mods[index];
   mods.splice(index, 1);
   mods.push(item);
+  saveMods();
   renderMods();
 }
 
 function renderMods() {
-  console.log("Rendering mods:", mods);
-
   // Update load_order for all mods before rendering
   mods.forEach((mod, index) => {
     mod.load_order = index + 1; // Assign load_order based on the position
@@ -113,12 +109,12 @@ function renderMods() {
           <span class="mod-title">${mod.load_order}</span>
           <span class="mod-title">${mod.title}</span>
           <div class="mod-controls">
-              <button class="icon-button move-top" onclick="moveToTop(${index})" title="Move to top">
+              <button class="icon-button move-top" onclick="moveToTop(${index}); saveMods();" title="Move to top">
                 <span class="material-symbols-outlined">
                 keyboard_double_arrow_up
                 </span>
               </button>
-              <button class="icon-button move-bottom" onclick="moveToBottom(${index})" title="Move to bottom">
+              <button class="icon-button move-bottom" onclick="moveToBottom(${index}); saveMods();" title="Move to bottom">
                 <span class="material-symbols-outlined">
                 keyboard_double_arrow_down
                 </span>
@@ -427,7 +423,6 @@ document.getElementById("copyButton").addEventListener("click", function () {
   const textarea = document.getElementById("configTextarea");
   textarea.select();
   document.execCommand("copy");
-  console.log("copied text"); // Debug log
 });
 
 document.addEventListener("DOMContentLoaded", function () {
