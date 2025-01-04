@@ -123,6 +123,7 @@ async function checkMissingModID() {
                     (mod) => mod.id !== modIdData,
                   );
                   checkMissingModID(); // Re-run to reflect the updated missing mods
+                  saveMods();
                 } else {
                   alert(`Failed to update Mod ID for "${modTitle}".`);
                 }

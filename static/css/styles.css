@@ -162,6 +162,55 @@ body {
 	gap: 8px;
 }
 
+/* Hide default checkbox */
+.mod-checkbox {
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--ctp-macchiato-subtext0);
+	/* Border color */
+	border-radius: 4px;
+	position: relative;
+	cursor: pointer;
+	background-color: var(--ctp-macchiato-surface0);
+	/* Background color */
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* When checked */
+.mod-checkbox:checked {
+	background-color: var(--ctp-macchiato-green);
+	/* Green for checked state */
+	border-color: var(--ctp-macchiato-green);
+}
+
+/* Add a check mark or other icon when checked */
+.mod-checkbox:checked::after {
+	content: "✔";
+	position: absolute;
+	top: 2px;
+	left: 4px;
+	color: var(--ctp-macchiato-crust);
+	/* Color for check mark */
+	font-size: 14px;
+}
+
+/* On hover */
+.mod-checkbox:hover {
+	border-color: var(--ctp-macchiato-overlay1);
+	/* Slightly lighter border on hover */
+}
+
+/* Optional: focus style */
+.mod-checkbox:focus {
+	outline: none;
+	border-color: var(--ctp-macchiato-sapphire);
+	/* Blue for focus state */
+}
+
+
 .icon-button {
 	color: var(--ctp-macchiato-peach);
 	background: none;
