@@ -44,19 +44,39 @@ async function checkMissingModID() {
     const response = await fetch("/api/mods");
     const mods = await response.json();
 
-    const missingModIDs = mods.filter((mod) => {
+    let missingModIDs = mods.filter((mod) => {
       const modId = String(mod.mod_ids);
       return !modId || modId.trim() === "";
     });
 
     const warningIcon = document.getElementById("warning-icon");
+
+    // Hide warning icon if there are no missing Mod IDs
+    if (missingModIDs.length === 0) {
+      warningIcon.style.display = "none";
+    } else {
+      warningIcon.style.display = "block";
+    }
+
     warningIcon.addEventListener("click", () => {
       if (missingModIDs.length > 0) {
         // Get modal
         const modal = document.getElementById("modIdsModal");
         const modalBody = modal.querySelector(".modal-body");
+
+        // Clear existing modal content
+        modalBody.innerHTML = "";
+
         const modList = missingModIDs
-          .map((mod) => `<p>${mod.title}</p>`)
+          .map(
+            (mod) => `
+              <div class="missing-item" data-mod-id="${mod.id}">
+                <p><a href="${mod.url}" target="_blank">${mod.title}</a></p>
+                <input type="text" class="mod-input" placeholder="Enter Mod ID" data-mod-id="${mod.id}" data-mod-title="${mod.title}" />
+                <button class="submit-mod-id" data-mod-id="${mod.id}" data-mod-title="${mod.title}">Submit</button>
+              </div>
+            `,
+          )
           .join("");
         modalBody.innerHTML = `${modList}`;
         modal.style.display = "block";
@@ -69,6 +89,50 @@ async function checkMissingModID() {
         window.addEventListener("click", (event) => {
           if (event.target === modal) {
             modal.style.display = "none";
+          }
+        });
+
+        // Add event listener to submit buttons
+        modalBody.addEventListener("click", async (event) => {
+          if (event.target.classList.contains("submit-mod-id")) {
+            const button = event.target;
+            const modTitle = button.getAttribute("data-mod-title");
+            const modIdData = button.getAttribute("data-mod-id"); // Get the mod's ID from data attribute
+            const input = button.previousElementSibling; // Get the associated input
+            const modID = input.value.trim();
+
+            if (modID) {
+              try {
+                const response = await fetch("/api/update-mod-id", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ id: modIdData, mod_id: modID }), // Send the mod ID and mod_id for updating
+                });
+
+                if (response.ok) {
+                  alert(`Mod ID for "${modTitle}" updated successfully!`);
+
+                  // Remove the mod from the missingModIDs list
+                  missingModIDs = missingModIDs.filter(
+                    (mod) => mod.id !== modIdData,
+                  );
+
+                  // Re-run the check and update the modal
+                  checkMissingModID(); // Recursively call to update the missing items list
+                } else {
+                  alert(`Failed to update Mod ID for "${modTitle}".`);
+                }
+              } catch (error) {
+                console.error("Error updating Mod ID:", error);
+                alert(
+                  "Error sending Mod ID. Please check the console for details.",
+                );
+              }
+            } else {
+              alert("Please enter a valid Mod ID before submitting.");
+            }
           }
         });
       }
@@ -358,6 +422,7 @@ async function addMods() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      checkMissingModID();
       loadMods(); // Re-fetch mods and render them
 
       closeModal();

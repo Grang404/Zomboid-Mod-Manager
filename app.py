@@ -47,6 +47,7 @@ def get_mods():
                     "id": mod["id"],
                     "workshop_id": mod["workshop_id"],
                     "title": mod["title"],
+                    "url": mod["url"],
                     "mod_ids": mod["mod_ids"],
                     "enabled": bool(mod["enabled"]),
                     "load_order": mod["load_order"],
@@ -172,6 +173,34 @@ def get_mods_from_url():
 
         return jsonify({"success": True, "mods": mods})
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/update-mod-id", methods=["POST"])
+def update_mod_id():
+    try:
+        data = request.json
+        mod_id = data["mod_id"]
+        mod_id_to_update = data["id"]
+
+        # Connect to the DB and execute update
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            UPDATE mods
+            SET mod_ids = ?
+            WHERE id = ?
+        """,
+            (mod_id, mod_id_to_update),
+        )
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Mod ID updated successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
