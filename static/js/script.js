@@ -503,18 +503,34 @@ function deleteMod(index) {
 
 document.getElementById("copyButton").addEventListener("click", function () {
   const textarea = document.getElementById("configTextarea");
-  textarea.select();
+
+  // Create a temporary textarea element to copy text from without highlighting
+  const tempTextArea = document.createElement("textarea");
+  tempTextArea.value = textarea.value;
+  document.body.appendChild(tempTextArea);
+
+  tempTextArea.select();
   document.execCommand("copy");
+
+  // Remove the temporary textarea
+  document.body.removeChild(tempTextArea);
+
+  const icon = document.querySelector("#copyButton .material-symbols-outlined");
+
+  // Apply shake effect and enlarge the icon
+  icon.classList.add("copied");
+
+  // Reset after animation
+  setTimeout(function () {
+    icon.classList.remove("copied");
+  }, 1000); // Time duration of the animation
 });
 
 document.addEventListener("DOMContentLoaded", function () {
   fetch("/get_mods_config")
     .then((response) => response.json())
     .then((data) => {
-      // Replace single line breaks with double line breaks to add spacing
-      const configContent = data.config_content
-        .replace(/;/g, ";\n") // Add a newline after each semicolon
-        .replace(/\\r\\n/g, "\n"); // Ensure that actual line breaks are respected
+      const configContent = data.config_content;
 
       const textarea = document.getElementById("configTextarea");
       textarea.value = configContent;
