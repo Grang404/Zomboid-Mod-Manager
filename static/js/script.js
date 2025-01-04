@@ -263,7 +263,7 @@ function updateConfig() {
     // Reset form
     fileUpload.value = "";
     fileName.textContent = "No file selected";
-    document.getElementById("configTextarea").value = "";
+    //document.getElementById("configTextarea").value = "";
   }
 
   // Close button event
