@@ -341,8 +341,8 @@ class ModManager:
         map_names_string = ";".join(map_names)
 
         # Generate the final config content
-        config_content = f"WorkshopItems={workshop_ids_string}\n"
-        config_content += f"Mods={mod_names_string}\n"
+        config_content = f"WorkshopItems={workshop_ids_string}\n\n"
+        config_content += f"Mods={mod_names_string}\n\n"
         config_content += f"Map={map_names_string}\n"
 
         return config_content

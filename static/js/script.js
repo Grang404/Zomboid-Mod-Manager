@@ -46,6 +46,7 @@ async function checkMissingModID() {
 
     let missingModIDs = mods.filter((mod) => {
       const modId = String(mod.mod_ids);
+      // Return true if modId is either falsy or whitespace
       return !modId || modId.trim() === "";
     });
 
@@ -253,9 +254,23 @@ function updateConfig() {
   const fileUpload = document.getElementById("fileUpload");
   const dropZone = document.getElementById("dropZone");
   const fileName = document.getElementById("fileName");
+  const textarea = document.getElementById("configTextarea");
 
   // Show modal
   modal.style.display = "block";
+
+  // Fetch and update config content every time the modal is opened
+  fetch("/get_mods_config")
+    .then((response) => response.json())
+    .then((data) => {
+      const configContent = data.config_content;
+      textarea.value = configContent;
+      console.log(data.config_content); // Debug
+      textarea.style.whiteSpace = "pre-wrap";
+    })
+    .catch((error) => {
+      console.error("Error fetching config content:", error);
+    });
 
   // Close modal functions
   function closeModal() {
@@ -263,7 +278,6 @@ function updateConfig() {
     // Reset form
     fileUpload.value = "";
     fileName.textContent = "No file selected";
-    //document.getElementById("configTextarea").value = "";
   }
 
   // Close button event
@@ -312,7 +326,7 @@ function updateConfig() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = "processed_config.txt"; // You can customize the filename
+      link.download = "processed_config.txt"; // Customize filename
 
       document.body.appendChild(link);
       link.click();
@@ -494,8 +508,19 @@ document.addEventListener("DOMContentLoaded", function () {
   fetch("/get_mods_config")
     .then((response) => response.json())
     .then((data) => {
-      const configContent = data.config_content;
-      document.getElementById("configTextarea").value = configContent;
+      // Replace single line breaks with double line breaks to add spacing
+      const configContent = data.config_content
+        .replace(/;/g, ";\n") // Add a newline after each semicolon
+        .replace(/\\r\\n/g, "\n"); // Ensure that actual line breaks are respected
+
+      const textarea = document.getElementById("configTextarea");
+      textarea.value = configContent;
+
+      // Ensure that the textarea uses pre-wrap to show newlines correctly
+      textarea.style.whiteSpace = "pre-wrap";
+
+      // Keep pre-wrap for line wrapping while preserving line breaks
+      textarea.style.whiteSpace = "pre-wrap";
     })
     .catch((error) => {
       console.error("Error fetching config content:", error);
