@@ -204,7 +204,7 @@ function renderMods() {
 if (!window.sortable) {
   window.sortable = new Sortable(document.getElementById("modList"), {
     animation: 150,
-    handle: ".mod-title",
+    handle: ".mod-item",
     dragClass: "dragging",
     forceFallback: true,
     scroll: true,

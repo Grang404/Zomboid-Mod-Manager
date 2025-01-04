@@ -126,6 +126,13 @@ body {
 	margin-bottom: 2px;
 	border-radius: 5px;
 	transition: background-color 0.2s;
+	cursor: grab;
+}
+
+.mod-item:hover {
+	/*color: var(--ctp-macchiato-lavender);*/
+	background-color: var(--ctp-macchiato-surface2);
+
 }
 
 .mod-item.moving {
@@ -152,7 +159,7 @@ body {
 
 .mod-title {
 	flex-grow: 1;
-	cursor: grab;
+	/*cursor: grab;*/
 	user-select: none;
 }
 
