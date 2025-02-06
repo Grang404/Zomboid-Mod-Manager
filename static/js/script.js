@@ -12,7 +12,6 @@ async function loadMods() {
   }
 }
 
-// Trigger the modal after saving mods (in saveMods function)
 async function saveMods() {
   const modOrder = Array.from(document.querySelectorAll(".mod-item")).map(
     (item, index) => ({
@@ -21,6 +20,7 @@ async function saveMods() {
       load_order: index + 1,
     }),
   );
+
   // TODO: Change alert(), kinda ugly
   try {
     const response = await fetch("/api/mods", {
@@ -49,7 +49,7 @@ async function checkMissingModID() {
       return !modId || modId.trim() === "";
     });
 
-    const warningIcon = document.getElementById("warning-icon");
+    const warningIcon = document.getElementById("warningIcon");
 
     // Show or hide warning icon based on missing mod IDs
     if (missingModIDs.length === 0) {
@@ -174,7 +174,9 @@ function renderMods() {
       (mod, index) => `
       <div class="mod-item" data-id="${mod.id}">
           <span class="mod-title">${mod.load_order}</span>
-          <span class="mod-title">${mod.title}</span>
+          <span class="mod-title">
+              <a href="${mod.url}" target="_blank">${mod.title}</a>
+          </span>
           <div class="mod-controls">
               <button class="icon-button move-top" onclick="moveToTop(${index}); saveMods();" title="Move to top">
                 <span class="material-symbols-outlined">

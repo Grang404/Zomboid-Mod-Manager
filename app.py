@@ -216,5 +216,5 @@ def get_mods_config():
 if __name__ == "__main__":
     os.makedirs("static", exist_ok=True)
     os.makedirs("templates", exist_ok=True)
-    print(app.url_map)
+    # print(app.url_map)
     app.run(debug=True)

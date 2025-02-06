@@ -15,23 +15,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
-        <h1>PZ Dedicated Server Mod Manager</h1>
-      </div>
-      <div class="button-container">
-        <button id="addMod" class="styled-button">Add Mod(s)</button>
-        <button
-          class="styled-button"
-          id="update_config"
-          onclick="updateConfig()"
-        >
-          Update Config
+    <nav class="navbar">
+      <h1>PZ Dedicated Server Mod Manager</h1>
+      <div class="navbar-actions">
+        <button id="addMod">
+          Add Mods
+          <i class="material-symbols-outlined"> add </i>
         </button>
-
-        <span class="material-symbols-outlined" id="warning-icon">warning</span>
+        <button id="updateConfig">
+          Update Config
+          <i class="material-symbols-outlined"> description </i>
+        </button>
+        <!--<button id="warningIcon">-->
+        <i id="warningIcon" class="material-symbols-outlined"> warning </i>
+        <!--</button>-->
       </div>
+    </nav>
 
+    <div class="container">
       <div class="mod-list" id="modList">
         <!-- Mods will be inserted here by JavaScript -->
       </div>
