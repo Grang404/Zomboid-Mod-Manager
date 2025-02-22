@@ -165,7 +165,7 @@ function moveToBottom(index) {
 function renderMods() {
   // Update load_order for all mods before rendering
   mods.forEach((mod, index) => {
-    mod.load_order = index + 1; // Assign load_order based on the position
+    mod.load_order = index + 1;
   });
 
   const modList = document.getElementById("modList");
@@ -173,7 +173,16 @@ function renderMods() {
     .map(
       (mod, index) => `
       <div class="mod-item" data-id="${mod.id}">
-          <span class="mod-title">${mod.load_order}</span>
+          <div class="mod-order-section">
+            <span class="mod-title">${mod.load_order}</span>
+            <label class="custom-checkbox">
+              <input type="checkbox" class="mod-checkbox" 
+                     ${mod.enabled ? "checked" : ""} 
+                     onchange="toggleMod(${index})">
+              <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
+              <span class="material-symbols-outlined checked">check_box</span>
+            </label>
+          </div>
           <span class="mod-title">
               <a href="${mod.url}" target="_blank">${mod.title}</a>
           </span>
@@ -190,9 +199,6 @@ function renderMods() {
               </button>
           </div>
           <div class="mod-actions">
-              <input type="checkbox" class="mod-checkbox" 
-                     ${mod.enabled ? "checked" : ""} 
-                     onchange="toggleMod(${index})">
               <button class="icon-button delete-mod" onclick="deleteMod(${index})" title="Delete mod">
                   <span class="material-symbols-outlined">delete</span>
               </button>

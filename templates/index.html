@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PZ Dedicated Server Mod Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
@@ -16,7 +22,9 @@
   </head>
   <body>
     <nav class="navbar">
-      <h1>PZ Dedicated Server Mod Manager</h1>
+      <h1 class="pacifico-regular">
+        <a href="{{ url_for('index') }}">PZ Mod Manager</a>
+      </h1>
       <div class="navbar-actions">
         <button id="addMod">
           Add Mods
@@ -84,15 +92,11 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>Mods with missing Mod ID's</h2>
-          <span
-            class="material-symbols-outlined help-icon"
-            data-tooltip="This is a tooltip message"
-          >
-            help
-          </span>
+          <span class="material-symbols-outlined help-icon"> help </span>
           <div id="tooltip">
-            Click on the links to the workshop page and look for Mod ID. Copy
-            and paste it into the text box :)
+            Follow each URL to to the Steam workshop page.<br /><br />
+            Look for the Mod ID.<br /><br />
+            Copy and paste it into the text box for the given mod.
           </div>
           <span class="close-modal">&times;</span>
         </div>
