@@ -182,6 +182,7 @@ function renderMods() {
               <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
               <span class="material-symbols-outlined checked">check_box</span>
             </label>
+              ${mod.mod_ids.includes(",") ? '<span class="material-symbols-outlined">keyboard_arrow_down</span>' : ""}
           </div>
           <span class="mod-title">
               <a href="${mod.url}" target="_blank">${mod.title}</a>
