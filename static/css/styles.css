@@ -36,6 +36,53 @@ body {
 	height: 100vh;
 }
 
+#notification-container {
+	position: fixed;
+	top: 1rem;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	pointer-events: none;
+	align-items: center;
+}
+
+.notification {
+	min-width: 200px;
+	max-width: 300px;
+	padding: 10px 15px;
+	border-radius: 6px;
+	font-size: 14px;
+	color: white;
+	opacity: 0;
+	transform: translateY(-10px);
+	transition: opacity 0.3s ease, transform 0.3s ease;
+	pointer-events: auto;
+}
+
+.notification.show {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.notification.info {
+	background-color: var(--blue);
+}
+
+.notification.success {
+	background-color: var(--green);
+}
+
+.notification.warning {
+	background-color: var(--orange);
+}
+
+.notification.error {
+	background-color: var(--red);
+}
+
 /* Navbar */
 .navbar {
 	display: flex;
@@ -53,6 +100,7 @@ body {
 	background-size: 200% 100%;
 	background-position: right bottom;
 	-webkit-background-clip: text;
+	background-clip: text;
 	-webkit-text-fill-color: transparent;
 	transition: background-position 0.3s ease-in-out, background-size 0.3s ease-in-out;
 	line-height: 1.8;
@@ -66,7 +114,6 @@ body {
 	background-position: left bottom;
 	text-shadow: 0 0 10px rgba(255, 105, 180, 0.7);
 }
-
 
 .navbar a {
 	text-decoration: none;
@@ -111,30 +158,6 @@ a:active {
 
 .navbar-actions .material-icons {
 	font-size: 24px;
-}
-
-#warningIcon {
-	font-size: 30px;
-	cursor: pointer;
-	transition: transform 0.3s ease;
-	color: var(--red);
-	display: flex !important;
-	align-items: center;
-	justify-content: center;
-	visibility: visible;
-	width: auto;
-	height: auto;
-	margin-right: 10px;
-
-}
-
-#warningIcon:hover {
-	transform: rotate(20deg);
-}
-
-
-#warning-icon:hover+#tooltip {
-	display: block;
 }
 
 
@@ -193,6 +216,13 @@ a:active {
 	min-width: 80px;
 }
 
+.mod-order {
+	width: 3ch;
+	/* Adjust to 3ch if you expect 100+ mods */
+	text-align: right;
+	display: inline-block;
+}
+
 .mod-title {
 	flex-grow: 1;
 	user-select: none;
@@ -230,14 +260,14 @@ a:active {
 	padding: 12px;
 	background: var(--surface1);
 	border-bottom: 1px solid var(--surface0);
-	transition: background-color 0.2s, opacity 0.3s ease, transform 0.3s ease;
+	transition: background-color 0.2s, opacity 1s ease, transform 1s ease;
 	opacity: 1;
 }
 
 .mod-item.deleting {
 	opacity: 0;
 	background-color: var(--red);
-	transform: translateX(100px);
+	transform: translateX(1200px);
 }
 
 .mod-controls {
@@ -246,48 +276,42 @@ a:active {
 	margin-right: 12px;
 }
 
-/*
-.mod-checkbox {
-	appearance: none;
-	-webkit-appearance: none;
-	-moz-appearance: none;
-	width: 20px;
-	height: 20px;
-	border: 2px solid var(--red);
-	border-radius: 4px;
-	position: relative;
+/* VIBE CODED */
+/* Toggle button */
+.toggle-details {
+	background: none;
+	border: none;
 	cursor: pointer;
-	background-color: var(--surface0);
-	transition: background-color 0.2s ease, border-color 0.2s ease;
+	padding: 4px;
+	margin-left: 8px;
+	display: flex;
+	align-items: center;
+	transition: transform 0.3s ease;
 }
 
-.mod-checkbox:checked {
-	background-color: var(--green);
-	border-color: var(--green);
+/* Optional rotation for arrow icon when expanded */
+.toggle-details.open span {
+	transform: rotate(180deg);
 }
 
-
-.mod-checkbox:checked::after {
-	content: "✔";
-	position: absolute;
-	top: 2px;
-	left: 4px;
-	color: var(--crust);
-	font-size: 14px;
+/* Mod details container with transition */
+.mod-details {
+	overflow: hidden;
+	max-height: 0;
+	opacity: 0;
+	transition: max-height 0.4s ease, opacity 0.4s ease;
 }
 
-.mod-checkbox:hover {
-	border-color: var(--surface1);
+/* Expanded state */
+.mod-details.show {
+	max-height: 500px;
+	/* Adjust based on expected content height */
+	opacity: 1;
 }
 
-.mod-checkbox:focus {
-	outline: none;
-	border-color: var(--blue);
-}
-*/
+/* ------------------- */
 
-/* Custom checkbox styles */
-.custom-checkbox {
+.checkbox {
 	position: relative;
 	display: inline-block;
 	cursor: pointer;
@@ -298,7 +322,7 @@ a:active {
 	/* Fixed height to match icon size */
 }
 
-.custom-checkbox input {
+.checkbox input {
 	position: absolute;
 	opacity: 0;
 	cursor: pointer;
@@ -306,7 +330,7 @@ a:active {
 	width: 0;
 }
 
-.custom-checkbox .material-symbols-outlined {
+.checkbox .material-symbols-outlined {
 	color: var(--text);
 	transition: all 0.2s ease;
 	font-size: 24px;
@@ -316,34 +340,32 @@ a:active {
 	transform: translate(-50%, -50%);
 }
 
-.custom-checkbox .checked {
+.checkbox .checked {
 	display: none;
 	color: var(--blue);
 }
 
-.custom-checkbox .unchecked {
+.checkbox .unchecked {
 	display: block;
 }
 
-.custom-checkbox input:checked~.checked {
+.checkbox input:checked~.checked {
 	display: block;
 }
 
-.custom-checkbox input:checked~.unchecked {
+.checkbox input:checked~.unchecked {
 	display: none;
 }
 
-/* Hover effect */
-.custom-checkbox:hover .material-symbols-outlined {
+.checkbox:hover .material-symbols-outlined {
 	color: var(--blue);
 }
 
-/* Animation for checking/unchecking */
-.custom-checkbox .material-symbols-outlined {
+.checkbox .material-symbols-outlined {
 	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.custom-checkbox input:checked~.checked {
+.checkbox input:checked~.checked {
 	animation: check-bounce 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -368,7 +390,7 @@ a:active {
 	padding: 4px 8px;
 	cursor: pointer;
 	border-radius: 4px;
-	transition: background-color 0.2s;
+	transition: background-color 0.2s, transform 0.2s ease, box-shadow 0.2s ease, color 0.2s;
 	font-size: 16px;
 	display: flex;
 	align-items: center;
@@ -377,209 +399,34 @@ a:active {
 
 .icon-button:hover {
 	color: var(--blue);
+	transform: scale(1.3);
+}
+
+.icon-button.delete-mod {
+	color: var(--red);
 }
 
 .icon-button.delete-mod:hover {
 	color: var(--red);
 }
 
-.save-button {
-	background: var(--blue);
-	border: none;
-	padding: 8px 16px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 1em;
-	transition: background-color 0.2s;
-}
-
-.save-button:hover {
-	background: var(--red);
-}
 
 
-/* Modal Styles */
-.modal {
-	display: none;
+
+#globalLoader {
 	position: fixed;
 	top: 0;
 	left: 0;
-	width: 100%;
-	height: 100%;
-	background-color: rgba(0, 0, 0, 0.5);
-	z-index: 1000;
-}
-
-.modal-content {
-	position: relative;
-	background-color: var(--base);
-	margin: 50px auto;
-	padding: 20px;
-	border-radius: 8px;
-	width: 90%;
-	max-width: 800px;
-	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.5);
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	margin-bottom: 20px;
-	position: relative;
-}
-
-.modal-header h2 {
-	margin: 0;
-	font-size: 1.5rem;
-}
-
-.close-modal {
-	position: absolute;
-	right: 0;
-	font-size: 1.8rem;
-	cursor: pointer;
-}
-
-.close-modal:hover {
-	color: var(--orange);
-}
-
-.modal-body {
-	margin-bottom: 20px;
-}
-
-.file-upload-container {
-	margin-bottom: 20px;
-}
-
-.file-upload-area {
-	border: 2px dashed var(--blue);
-	border-radius: 8px;
-	padding: 40px 20px;
-	text-align: center;
-	cursor: pointer;
-	transition: background-color 0.2s;
-}
-
-.file-upload-area:hover {
-	background-color: var(--surface0);
-}
-
-.upload-icon {
-	font-size: 48px;
-	margin-bottom: 10px;
-}
-
-.file-input {
-	display: none;
-}
-
-.file-name {
-	display: block;
-	margin-top: 10px;
-}
-
-.divider {
-	position: relative;
-	text-align: center;
-	margin: 20px 0;
-}
-
-.divider::before {
-	content: "";
-	position: absolute;
-	top: 50%;
-	left: 0;
-	right: 0;
-	height: 1px;
-}
-
-.divider span {
-	padding: 0 10px;
-	position: relative;
-}
-
-#configTextarea {
-	width: 100%;
-	height: 500px !important;
-	padding: 12px;
-	border: 1px solid var(--surface0);
-	border-radius: 4px;
-	resize: vertical;
-	font-family: inherit;
-	box-sizing: border-box;
-	background-color: var(--mantle);
-	color: var(--text);
-}
-
-.modal-footer {
-	display: flex;
-	justify-content: flex-end;
-	gap: 10px;
-}
-
-.modal-button {
-	padding: 8px 16px;
-	border-radius: 4px;
-	cursor: pointer;
-	border: none;
-	font-size: 14px;
-}
-
-.modal-button.cancel {
-	background-color: var(--orange);
-}
-
-.modal-button.cancel:hover {
-	background-color: var(--red);
-}
-
-.modal-button.save {
-	background-color: var(--blue);
-}
-
-.modal-button.save:hover {
-	background-color: var(--blue);
-}
-
-.input-group {
-	margin: 20px 0;
-}
-
-.input-group label {
-	display: block;
-	margin-bottom: 8px;
-	font-weight: 500;
-}
-
-.url-input {
-	width: 100%;
-	padding: 8px 12px;
-	border: 1px solid var(--surface0);
-	border-radius: 4px;
-	font-size: 14px;
-	box-sizing: border-box;
-	background-color: var(--mantle);
-	color: var(--text);
-}
-
-.url-input:focus {
-	outline: none;
-	border-color: var(--blue);
-	box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
-}
-
-.url-input::placeholder {
-	color: var(--surface1);
+	z-index: 9999;
 }
 
 /* Fancy Spinner Styles */
-.spinner-container {
-	text-align: center;
-	margin: 20px 0;
-	padding: 20px;
-}
 
 .fancy-spinner {
 	position: relative;
@@ -622,12 +469,6 @@ a:active {
 	animation: spin-center 1.5s linear infinite;
 }
 
-.loading-text {
-	color: var(--surface1);
-	font-size: 14px;
-	margin-top: 10px;
-	animation: pulse 1.5s ease-in-out infinite;
-}
 
 @keyframes spin-outer {
 	0% {
@@ -673,45 +514,21 @@ a:active {
 	}
 }
 
-.config-textarea-container {
-	position: relative;
-	width: 100%;
-}
-
-#configTextarea {
-	width: 100%;
-	padding-right: 40px;
-	box-sizing: border-box;
-	height: 150px;
-	white-space: pre-wrap !important;
-}
-
-.copy-button {
+.loading-text {
 	color: var(--surface1);
+	font-size: 14px;
+	margin-top: 55px;
+	margin-left: 5px;
+	animation: pulse 1.5s ease-in-out infinite;
+
 	position: absolute;
-	top: 10px;
-	right: 10px;
-	background: none;
-	border: none;
-	cursor: pointer;
-}
-
-.copy-button:hover {
-	color: var(--blue);
-}
-
-.copy-button .material-symbols-outlined {
-	font-size: 24px;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .material-symbols-outlined {
 	transition: transform 0.3s ease;
-	/* Smooth transition for scale and shake */
-}
-
-.material-symbols-outlined.copied {
-	transform: scale(1.5) rotate(10deg);
-	/* Enlarges the icon and adds a slight rotation */
 }
 
 @keyframes shake {
@@ -738,70 +555,12 @@ a:active {
 
 .material-symbols-outlined.copied {
 	animation: shake 0.5s ease;
-	/* Shake animation */
 }
 
-
-/* Modal styles for concise and clean list */
-.missing-item {
-	display: flex;
-	align-items: center;
-	margin-bottom: 10px;
-	border-bottom: 1px solid var(--surface0);
-	padding: 10px 0;
-}
-
-.missing-item p {
-	flex: 1;
-	font-size: 14px;
-	margin: 0;
-	color: var(--text);
-	overflow-wrap: break-word;
-	/* To ensure long text doesn't overflow */
-	word-wrap: break-word;
-}
-
-.missing-item input {
-	flex: 2;
-	padding: 5px 10px;
-	font-size: 14px;
-	border: 1px solid var(--surface0);
-	border-radius: 4px;
-	margin-right: 10px;
-	background-color: var(--surface1);
-	color: var(--text);
-	width: 100%;
-	box-sizing: border-box;
-	overflow-wrap: break-word;
-	/* Ensure long Mod IDs are wrapped */
-	word-wrap: break-word;
-}
-
-.missing-item button {
-	flex: 0;
-	padding: 5px 15px;
-	font-size: 14px;
-	background-color: var(--blue);
-	color: var(--crust);
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	transition: background-color 0.3s ease;
-}
-
-.missing-item button:hover {
-	background-color: var(--blue);
-}
-
-.missing-item button:disabled {
-	background-color: var(--surface1);
-	cursor: not-allowed;
-}
-
-/* General Modal Styling */
 .modal {
 	display: none;
-	/* Hidden by default */
+	justify-content: center;
+	align-items: center;
 	position: fixed;
 	z-index: 1000;
 	left: 0;
@@ -810,98 +569,111 @@ a:active {
 	height: 100%;
 	overflow: auto;
 	background-color: rgba(0, 0, 0, 0.5);
-	/* Black background with opacity */
 }
 
-/* Specific Styling for modIdsModal */
-#modIdsModal .modal-content {
+.modal-content {
 	position: relative;
-	margin: 5% auto;
-	/* Center vertically and horizontally */
 	background-color: var(--base);
+	margin: 50px auto;
 	padding: 20px;
-	border: 1px solid var(--surface0);
 	border-radius: 8px;
-	width: 80%;
-	/* Make it wider */
-	max-width: 1000px;
-	/* Limit maximum size */
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-#modIdsModal .modal-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	border-bottom: 1px solid var(--surface0);
-	padding-bottom: 10px;
-	margin-bottom: 20px;
-}
-
-#modIdsModal .modal-header h2 {
-	font-size: 24px;
-	margin: 0;
-	color: var(--text);
-}
-
-#modIdsModal .close-modal {
-	font-size: 28px;
-	font-weight: bold;
-	color: var(--orange);
-	cursor: pointer;
-}
-
-#modIdsModal .close-modal:hover {
-	color: var(--red);
-}
-
-#modIdsModal .modal-body {
-	max-height: 60vh;
-	/* Scrollable if content overflows */
-	overflow-y: auto;
-	padding-right: 10px;
-}
-
-/* Ensure that long Mod IDs fit */
-.missing-item input {
-	width: 25%;
-	max-width: 25%;
-	text-overflow: ellipsis;
-	overflow: hidden;
-	white-space: nowrap;
-}
-
-#modIdsModal a {
-	color: var(--purple);
-	text-decoration: none;
-	font-weight: bold;
-	transition: color 0.3s ease, text-shadow 0.3s ease;
-}
-
-#modIdsModal a:hover {
-	color: var(--pink);
-	text-shadow: 0 0 10px rgba(255, 105, 180, 0.7);
+	width: 90%;
+	max-width: 800px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .modal-header {
 	display: flex;
-	justify-content: space-between;
+	justify-content: center;
 	align-items: center;
-	position: relative;
-	padding-bottom: 10px;
 	margin-bottom: 20px;
+	position: relative;
 }
 
 .modal-header h2 {
-	font-size: 24px;
 	margin: 0;
+	font-size: 1.5rem;
+}
+
+.close-modal {
+	position: absolute;
+	right: 0;
+	font-size: 1.8rem;
+	cursor: pointer;
+}
+
+.close-modal:hover {
+	color: var(--orange);
+}
+
+.modal-body {
+	margin-bottom: 20px;
+}
+
+
+.divider {
+	position: relative;
+	text-align: center;
+	margin: 20px 20px 20px 20px;
+}
+
+.modal-footer {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
+}
+
+.modal-button {
+	padding: 8px 16px;
+	border-radius: 4px;
+	cursor: pointer;
+	border: none;
+	font-size: 14px;
+}
+
+.modal-button.submit {
+	background-color: var(--blue);
+}
+
+.modal-button.submit:hover {
+	background-color: var(--green);
+}
+
+.input-group {
+	margin: 20px 0;
+}
+
+.input-group label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 500;
+}
+
+.url-input {
+	width: 100%;
+	padding: 8px 12px;
+	border: 1px solid var(--surface0);
+	border-radius: 4px;
+	font-size: 14px;
+	box-sizing: border-box;
+	background-color: var(--mantle);
 	color: var(--text);
+}
+
+.url-input:focus {
+	outline: none;
+	border-color: var(--blue);
+	box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.url-input::placeholder {
+	color: var(--surface1);
 }
 
 .help-icon {
 	position: absolute;
 	right: 50px;
-	/* Adjust to ensure it's not overlapping */
 	font-size: 28px;
 	cursor: pointer;
 	color: var(--orange);
@@ -915,10 +687,9 @@ a:active {
 	display: none;
 	position: absolute;
 	top: 40px;
-	/* Adjust based on your design */
 	right: 0;
 	left: auto;
-	transform: translateX(50%);
+	transform: translateX(25%);
 	background-color: var(--surface0);
 	color: var(--text);
 	padding: 10px;
@@ -929,5 +700,5 @@ a:active {
 }
 
 .help-icon:hover+#tooltip {
-	display: block;
+	display: block !important;
 }

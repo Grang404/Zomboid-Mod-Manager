@@ -1,155 +1,303 @@
-// Initialize the mod list
 let mods = [];
+let isLoading = false;
+
+// ====================== API Integration Functions ======================
 
 async function loadMods() {
   try {
+    showLoadingIndicator();
     const response = await fetch("/api/mods");
+
+    if (!response.ok) {
+      throw new Error(
+        `Server returned ${response.status}: ${response.statusText}`,
+      );
+    }
+
     mods = await response.json();
+
+    if (!mods || Object.keys(mods).length === 0) {
+      showNotification("There are no mods to load 😢");
+    } else {
+      showNotification("Mods loaded successfully", "success");
+    }
     renderMods();
   } catch (error) {
     console.error("Error loading mods:", error);
-    alert("Error loading mods. Please check the console for details.");
+    showNotification("Failed to load mods. Please try again.", "error");
+  } finally {
+    hideLoadingIndicator();
   }
 }
 
 async function saveMods() {
-  const modOrder = Array.from(document.querySelectorAll(".mod-item")).map(
-    (item, index) => ({
-      id: parseInt(item.dataset.id),
-      enabled: item.querySelector(".mod-checkbox").checked,
-      load_order: index + 1,
-    }),
-  );
-
-  // TODO: Change alert(), kinda ugly
   try {
+    // Update load_order for all mods before saving
+    mods.forEach((mod, index) => {
+      mod.load_order = index + 1;
+    });
+
+    const modOrder = Array.from(document.querySelectorAll(".mod-item")).map(
+      (item, index) => ({
+        id: parseInt(item.dataset.id),
+        enabled: item.querySelector(".mod-checkbox").checked,
+        load_order: index + 1,
+      }),
+    );
+
     const response = await fetch("/api/mods", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(modOrder),
     });
 
-    if (response.ok) {
-    } else {
-      throw new Error("Failed to save changes");
+    if (!response.ok) {
+      throw new Error(
+        `Server returned ${response.status}: ${response.statusText}`,
+      );
     }
   } catch (error) {
     console.error("Error saving changes:", error);
-    alert("Error saving changes. Please check the console for details.");
+    showNotification("Failed to save changes. Please try again.", "error");
+  } finally {
+    hideLoadingIndicator();
   }
 }
 
-async function checkMissingModID() {
+async function deleteMod(index) {
+  const mod = mods[index];
+  const modId = mod.id;
+  const modTitle = mod.title;
+
   try {
-    const response = await fetch("/api/mods");
-    const mods = await response.json();
+    const modElement = document.querySelector(`.mod-item[data-id="${modId}"]`);
 
-    let missingModIDs = mods.filter((mod) => {
-      const modId = String(mod.mod_ids);
-      return !modId || modId.trim() === "";
-    });
+    modElement.classList.add("moving");
+    modElement.classList.add("deleting");
 
-    const warningIcon = document.getElementById("warningIcon");
-
-    // Show or hide warning icon based on missing mod IDs
-    if (missingModIDs.length === 0) {
-      warningIcon.style.display = "none";
-    } else {
-      warningIcon.style.display = "block";
-    }
-
-    warningIcon.addEventListener("click", () => {
-      if (missingModIDs.length > 0) {
-        const modal = document.getElementById("modIdsModal");
-        const modalBody = modal.querySelector(".modal-body");
-
-        // Clear existing modal content
-        modalBody.innerHTML = "";
-
-        const modList = missingModIDs
-          .map(
-            (mod) => `
-              <div class="missing-item" data-mod-id="${mod.id}">
-                <p><a href="${mod.url}" target="_blank">${mod.title}</a></p>
-                <input type="text" class="mod-input" placeholder="Enter Mod ID" data-mod-id="${mod.id}" data-mod-title="${mod.title}" />
-                <button class="submit-mod-id" data-mod-id="${mod.id}" data-mod-title="${mod.title}">Submit</button>
-              </div>
-            `,
-          )
-          .join("");
-
-        modalBody.innerHTML = modList;
-        modal.style.display = "block";
-
-        const closeModal = modal.querySelector(".close-modal");
-        closeModal.addEventListener("click", () => {
-          modal.style.display = "none";
+    // Wait for animation to complete before making the API call
+    setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/mods/${modId}`, {
+          method: "DELETE",
         });
 
-        window.addEventListener("click", (event) => {
-          if (event.target === modal) {
-            modal.style.display = "none";
-          }
+        if (!response.ok) {
+          throw new Error(
+            `Server returned ${response.status}: ${response.statusText}`,
+          );
+        }
+
+        mods.splice(index, 1);
+
+        // Update load_order for all remaining mods
+        mods.forEach((mod, index) => {
+          mod.load_order = index + 1;
         });
 
-        // Use event delegation for the submit buttons
-        modalBody.addEventListener("click", async (event) => {
-          if (event.target.classList.contains("submit-mod-id")) {
-            const button = event.target;
-            const modTitle = button.getAttribute("data-mod-title");
-            const modIdData = button.getAttribute("data-mod-id");
-            const input = button.previousElementSibling;
-            const modID = input.value.trim();
+        showNotification(`${modTitle} deleted successfully`, "warning");
+        saveMods();
+        renderMods();
+      } catch (error) {
+        console.error("Error deleting mod:", error);
+        showNotification(`Failed to delete "${modTitle}"`, "error");
 
-            if (modID) {
-              try {
-                const response = await fetch("/api/update-mod-id", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ id: modIdData, mod_id: modID }),
-                });
-
-                if (response.ok) {
-                  // Remove the parent "missing-item" element from the DOM
-                  const parentElement = button.closest(".missing-item");
-                  if (parentElement) {
-                    parentElement.remove(); // This will remove the entire parent div
-                  }
-
-                  // Update the missingModIDs list and re-render modal content
-                  missingModIDs = missingModIDs.filter(
-                    (mod) => mod.id !== modIdData,
-                  );
-                  checkMissingModID(); // Re-run to reflect the updated missing mods
-                  saveMods();
-                } else {
-                  alert(`Failed to update Mod ID for "${modTitle}".`);
-                }
-              } catch (error) {
-                console.error("Error updating Mod ID:", error);
-                alert(
-                  "Error sending Mod ID. Please check the console for details.",
-                );
-              }
-            } else {
-              alert("Please enter a valid Mod ID before submitting.");
-            }
-          }
-        });
+        // Remove the deleting class if there's an error
+        modElement.classList.remove("moving");
+        modElement.classList.remove("deleting");
       }
-    });
+    }, 400);
   } catch (error) {
-    console.error("Error checking missing mod_id:", error);
-    alert("Error checking mods. Please check the console for details.");
+    console.error("Error preparing to delete mod:", error);
+    showNotification(`Failed to delete "${modTitle}"`, "error");
   }
 }
-// TODO: add update for mod index
+
+// ====================== UI Rendering ======================
+
+/**
+ * Renders the mod list in the DOM
+ */
+function renderMods() {
+  mods.forEach((mod, index) => {
+    mod.load_order = index + 1;
+  });
+
+  // Now sort by the newly updated load_order (this should maintain the current order)
+  mods.sort((a, b) => a.load_order - b.load_order);
+
+  const modList = document.getElementById("modList");
+  if (!modList) return;
+
+  // Apply any active filters
+  const searchTerm =
+    document.getElementById("modSearch")?.value?.toLowerCase() || "";
+  const enabledFilter =
+    document.getElementById("filterEnabled")?.checked || false;
+
+  const filteredMods = mods.filter((mod) => {
+    const matchesSearch = mod.title.toLowerCase().includes(searchTerm);
+    const matchesEnabled = !enabledFilter || mod.enabled;
+    return matchesSearch && matchesEnabled;
+  });
+
+  if (filteredMods.length === 0) {
+    modList.innerHTML = `<div class="no-mods-message">No mods found matching your filters</div>`;
+    return;
+  }
+
+  modList.innerHTML = filteredMods
+    .map((mod, index) => {
+      // Find the original index in the mods array
+      const originalIndex = mods.findIndex((m) => m.id === mod.id);
+      return renderModItem(mod, originalIndex);
+    })
+    .join("");
+
+  // Update counter
+  const totalCounter = document.getElementById("totalModsCount");
+  const filteredCounter = document.getElementById("filteredModsCount");
+  const enabledCounter = document.getElementById("enabledModsCount");
+
+  if (totalCounter) totalCounter.textContent = mods.length;
+  if (filteredCounter) filteredCounter.textContent = filteredMods.length;
+  if (enabledCounter)
+    enabledCounter.textContent = mods.filter((mod) => mod.enabled).length;
+
+  // Initialize sortable after rendering
+  initializeSortable();
+}
+
+/**
+ * Renders a single mod item
+ * @param {Object} mod - The mod object
+ * @param {number} index - The index of the mod in the mods array
+ * @returns {string} HTML string for the mod item
+ */
+function renderModItem(mod, index) {
+  // Parse mod_ids into an array
+  const modIdArray = mod.mod_ids
+    ? mod.mod_ids
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id)
+    : [];
+  const hasMultipleIds = modIdArray.length > 1;
+
+  return `
+  <div class="mod-item ${mod.enabled ? "enabled" : "disabled"}" data-id="${mod.id}">
+      <div class="mod-order-section">
+        <span class="mod-order">${mod.load_order}</span>
+        <label class="checkbox">
+          <input type="checkbox" class="mod-checkbox" 
+                 ${mod.enabled ? "checked" : ""} 
+                 onchange="toggleMod(${index})">
+          <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
+          <span class="material-symbols-outlined checked">check_box</span>
+        </label>
+      </div>
+      
+      <span class="mod-title">
+          <a href="${mod.url}" target="_blank" title="${mod.title}">${mod.title}</a>
+          ${
+            hasMultipleIds
+              ? `<button class="icon-button toggle-details" onclick="toggleModDetails(${mod.id})" title="Show mod details">
+               <span class="material-symbols-outlined">keyboard_arrow_down</span>
+             </button>`
+              : ""
+          }
+      </span>
+      
+      <div class="mod-controls">
+          <button class="icon-button move-top" onclick="moveToTop(${index});" title="Move to top">
+            <span class="material-symbols-outlined">keyboard_double_arrow_up</span>
+          </button>
+          <button class="icon-button move-bottom" onclick="moveToBottom(${index});" title="Move to bottom">
+            <span class="material-symbols-outlined">keyboard_double_arrow_down</span>
+          </button>
+          <button class="icon-button move-up" onclick="moveModUp(${index});" title="Move up">
+            <span class="material-symbols-outlined">keyboard_arrow_up</span>
+          </button>
+          <button class="icon-button move-down" onclick="moveModDown(${index});" title="Move down">
+            <span class="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
+      </div>
+      
+      <div class="mod-actions">
+          <button class="icon-button delete-mod" onclick="deleteMod(${index})" title="Delete mod">
+              <span class="material-symbols-outlined">delete</span>
+          </button>
+      </div>
+      
+      ${
+        hasMultipleIds
+          ? `<div class="mod-details" id="mod-details-${mod.id}" style="display: none;">
+           <h4>Mod IDs (${modIdArray.length}):</h4>
+           <ul class="mod-id-list">
+             ${modIdArray.map((id) => `<li>${id}</li>`).join("")}
+           </ul>
+           <div class="workshop-id">Workshop ID: ${mod.workshop_id || "N/A"}</div>
+         </div>`
+          : ""
+      }
+  </div>
+  `;
+}
+
+/**
+ * Toggle visibility of mod details
+ * @param {number} modId - The mod ID
+ */
+function toggleModDetails(modId) {
+  const detailsElement = document.getElementById(`mod-details-${modId}`);
+  const button = document.querySelector(
+    `.mod-item[data-id="${modId}"] .toggle-details span`,
+  );
+
+  if (detailsElement.style.display === "none") {
+    detailsElement.style.display = "block";
+    button.textContent = "keyboard_arrow_up";
+  } else {
+    detailsElement.style.display = "none";
+    button.textContent = "keyboard_arrow_down";
+  }
+}
+
+// ====================== UI Event Handlers ======================
+
+function toggleMod(index) {
+  mods[index].enabled = !mods[index].enabled;
+  saveMods();
+
+  // Update UI without full re-render
+  const modItem = document.querySelector(
+    `.mod-item[data-id="${mods[index].id}"]`,
+  );
+  if (modItem) {
+    if (mods[index].enabled) {
+      modItem.classList.add("enabled");
+      modItem.classList.remove("disabled");
+    } else {
+      modItem.classList.add("disabled");
+      modItem.classList.remove("enabled");
+    }
+  }
+
+  // Update counter
+  const enabledCounter = document.getElementById("enabledModsCount");
+  if (enabledCounter) {
+    enabledCounter.textContent = mods.filter((mod) => mod.enabled).length;
+  }
+}
+
 function moveToTop(index) {
   const item = mods[index];
   mods.splice(index, 1);
   mods.unshift(item);
+
+  mods.forEach((mod, idx) => {
+    mod.load_order = idx + 1;
+  });
   saveMods();
   renderMods();
 }
@@ -158,62 +306,67 @@ function moveToBottom(index) {
   const item = mods[index];
   mods.splice(index, 1);
   mods.push(item);
+
+  mods.forEach((mod, idx) => {
+    mod.load_order = idx + 1;
+  });
   saveMods();
   renderMods();
 }
 
-function renderMods() {
-  // Update load_order for all mods before rendering
-  mods.forEach((mod, index) => {
-    mod.load_order = index + 1;
-  });
-
-  const modList = document.getElementById("modList");
-  modList.innerHTML = mods
-    .map(
-      (mod, index) => `
-      <div class="mod-item" data-id="${mod.id}">
-          <div class="mod-order-section">
-            <span class="mod-title">${mod.load_order}</span>
-            <label class="custom-checkbox">
-              <input type="checkbox" class="mod-checkbox" 
-                     ${mod.enabled ? "checked" : ""} 
-                     onchange="toggleMod(${index})">
-              <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
-              <span class="material-symbols-outlined checked">check_box</span>
-            </label>
-              ${mod.mod_ids.includes(",") ? '<span class="material-symbols-outlined">keyboard_arrow_down</span>' : ""}
-          </div>
-          <span class="mod-title">
-              <a href="${mod.url}" target="_blank">${mod.title}</a>
-          </span>
-          <div class="mod-controls">
-              <button class="icon-button move-top" onclick="moveToTop(${index}); saveMods();" title="Move to top">
-                <span class="material-symbols-outlined">
-                keyboard_double_arrow_up
-                </span>
-              </button>
-              <button class="icon-button move-bottom" onclick="moveToBottom(${index}); saveMods();" title="Move to bottom">
-                <span class="material-symbols-outlined">
-                keyboard_double_arrow_down
-                </span>
-              </button>
-          </div>
-          <div class="mod-actions">
-              <button class="icon-button delete-mod" onclick="deleteMod(${index})" title="Delete mod">
-                  <span class="material-symbols-outlined">delete</span>
-              </button>
-          </div>
-      </div>
-      `,
-    )
-    .join("");
+function moveModUp(index) {
+  if (index <= 0) return;
+  const temp = mods[index];
+  mods[index] = mods[index - 1];
+  mods[index - 1] = temp;
+  saveMods();
+  renderMods();
 }
 
-if (!window.sortable) {
-  window.sortable = new Sortable(document.getElementById("modList"), {
+function moveModDown(index) {
+  if (index >= mods.length - 1) return;
+  const temp = mods[index];
+  mods[index] = mods[index + 1];
+  mods[index + 1] = temp;
+  saveMods();
+  renderMods();
+}
+
+/**
+ * TODO: Implement this
+ */
+function enableAllMods() {
+  mods.forEach((mod) => (mod.enabled = true));
+  saveMods();
+  renderMods();
+  showNotification("All mods enabled", "success");
+}
+
+/**
+ * TODO: Implement this
+ */
+function disableAllMods() {
+  mods.forEach((mod) => (mod.enabled = false));
+  saveMods();
+  renderMods();
+  showNotification("All mods disabled", "success");
+}
+
+/**
+ * Initializes sortable functionality for the mod list
+ */
+function initializeSortable() {
+  if (window.sortable) {
+    window.sortable.destroy();
+  }
+
+  const modList = document.getElementById("modList");
+  if (!modList) return;
+
+  window.sortable = new Sortable(modList, {
     animation: 150,
     handle: ".mod-item",
+    filter: ".checkbox, .delete-mod",
     dragClass: "dragging",
     forceFallback: true,
     scroll: true,
@@ -226,341 +379,256 @@ if (!window.sortable) {
     onEnd: function (evt) {
       document.removeEventListener("wheel", handleWheel);
 
-      // Get the moved item
-      const item = mods[evt.oldIndex];
+      // Get the moved item and current mods array
+      const currentMods = Array.from(modList.querySelectorAll(".mod-item")).map(
+        (el) => mods.find((mod) => mod.id === parseInt(el.dataset.id)),
+      );
 
-      // Re-arrange the mod list
-      mods.splice(evt.oldIndex, 1);
-      mods.splice(evt.newIndex, 0, item);
+      // Update mods array with the new order
+      mods = currentMods;
 
       // Update load_order for all mods based on the new positions
       mods.forEach((mod, index) => {
-        mod.load_order = index + 1; // Assign load_order based on the position
+        mod.load_order = index + 1;
       });
-
-      // Re-render the updated list with new load_order
       renderMods();
       saveMods();
     },
   });
 }
 
+/**
+ * Handles wheel events during drag operations
+ * @param {Event} e - The wheel event
+ */
 function handleWheel(e) {
   e.preventDefault();
   const modList = document.getElementById("modList");
-  if (window.sortable.dragging) {
+  if (window.sortable && window.sortable.dragging) {
     modList.scrollTop += e.deltaY;
   }
 }
 
-function toggleMod(index) {
-  mods[index].enabled = !mods[index].enabled;
-  saveMods();
+/**
+ * Handles the search functionality
+ */
+function handleSearch() {
+  renderMods();
 }
 
-function updateConfig() {
-  const modal = document.getElementById("configModal");
+/**
+ * Creates and manages a modal dialog
+ * @param {string} id - The ID of the modal element
+ * @returns {Object} Modal control object
+ */
+function createModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return null;
   const closeBtn = modal.querySelector(".close-modal");
-  const cancelBtn = modal.querySelector(".modal-button.cancel");
-  const saveBtn = modal.querySelector(".modal-button.save");
-  const fileUpload = document.getElementById("fileUpload");
-  const dropZone = document.getElementById("dropZone");
-  const fileName = document.getElementById("fileName");
-  const textarea = document.getElementById("configTextarea");
-
   // Show modal
   modal.style.display = "block";
-
-  // Fetch and update config content every time the modal is opened
-  fetch("/get_mods_config")
-    .then((response) => response.json())
-    .then((data) => {
-      const configContent = data.config_content;
-      textarea.value = configContent;
-      console.log(data.config_content); // Debug
-      textarea.style.whiteSpace = "pre-wrap";
-    })
-    .catch((error) => {
-      console.error("Error fetching config content:", error);
-    });
-
-  // Close modal functions
+  // Close modal function
   function closeModal() {
     modal.style.display = "none";
-    // Reset form
-    fileUpload.value = "";
-    fileName.textContent = "No file selected";
-  }
-
-  // Close button event
-  closeBtn.onclick = closeModal;
-  cancelBtn.onclick = closeModal;
-
-  // Close modal when clicking outside
-  window.onclick = function (event) {
-    if (event.target === modal) {
-      closeModal();
-    }
-  };
-
-  // File upload handling
-  fileUpload.onchange = function (e) {
-    if (e.target.files[0]) {
-      fileName.textContent = e.target.files[0].name;
-    }
-  };
-
-  // Process button handling
-  saveBtn.onclick = async function () {
-    const missingModIDs = mods.filter(
-      (mod) => !mod.mod_ids || mod.mod_ids.trim() === "",
+    // Reset form fields
+    const inputs = modal.querySelectorAll(
+      "input:not([type=checkbox]), textarea",
     );
-
-    if (missingModIDs.length > 0) {
-      alert("Warning");
-    }
-    const file = fileUpload.files[0];
-    if (!file) {
-      alert("Please select a file first");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("config_file", file);
-
-    try {
-      const response = await fetch("/api/process_config", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Get the processed file from the response
-      const blob = await response.blob();
-
-      // Create a download link and trigger it
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = "processed_config.txt"; // Customize filename
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Clean up
-      window.URL.revokeObjectURL(downloadUrl);
-      closeModal();
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Error processing file. Please try again.");
-    }
-  };
-
-  // Drag and drop functionality
-  dropZone.onclick = function () {
-    fileUpload.click();
-  };
-
-  dropZone.ondragover = function (e) {
-    e.preventDefault();
-    this.style.backgroundColor = "#f8f9fa";
-  };
-
-  dropZone.ondragleave = function (e) {
-    e.preventDefault();
-    this.style.backgroundColor = "";
-  };
-
-  dropZone.ondrop = function (e) {
-    e.preventDefault();
-    this.style.backgroundColor = "";
-
-    if (e.dataTransfer.files[0]) {
-      fileUpload.files = e.dataTransfer.files;
-      fileName.textContent = e.dataTransfer.files[0].name;
-    }
-  };
-}
-
-async function addMods() {
-  const modal = document.getElementById("addModsModal");
-  const closeBtn = modal.querySelector(".close-modal");
-  const cancelBtn = modal.querySelector(".modal-button.cancel");
-  const saveBtn = modal.querySelector(".modal-button.save");
-  const collectionInput = document.getElementById("collectionUrl");
-  const workshopInput = document.getElementById("workshopUrl");
-  const spinner = document.getElementById("loadingSpinner");
-
-  // Show modal
-  modal.style.display = "block";
-
-  // Close modal functions
-  function closeModal() {
-    modal.style.display = "none";
-    collectionInput.value = "";
-    workshopInput.value = "";
-    spinner.style.display = "none"; // Hide spinner when closing
+    inputs.forEach((input) => (input.value = ""));
   }
-
-  // Close button event
-  closeBtn.onclick = closeModal;
-  cancelBtn.onclick = closeModal;
-
+  // Close button events
+  if (closeBtn) closeBtn.onclick = closeModal;
   // Close modal when clicking outside
   window.onclick = function (event) {
     if (event.target === modal) {
       closeModal();
     }
   };
-
-  // Process button handling
-  saveBtn.onclick = async function () {
-    const collectionInputUrl = collectionInput.value.trim();
-    const workshopInputUrl = workshopInput.value.trim();
-
-    if (!collectionInputUrl && !workshopInputUrl) {
-      alert("Please enter a valid URL");
-      return;
-    }
-
-    if (collectionInputUrl && workshopInputUrl) {
-      alert("Please enter only one field");
-      return;
-    }
-
-    try {
-      // Show spinner and disable save button
-      spinner.style.display = "block";
-      saveBtn.disabled = true;
-
-      const url = collectionInputUrl || workshopInputUrl;
-      const urlType = collectionInputUrl ? "collection" : "workshop";
-
-      const response = await fetch("/get_mods_from_url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: url,
-          type: urlType,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      checkMissingModID();
-      loadMods(); // Re-fetch mods and render them
-
-      closeModal();
-    } catch (error) {
-      console.error("Error processing mods:", error);
-      alert("Error processing mods. Please try again.");
-    } finally {
-      // Hide spinner and re-enable save button
-      spinner.style.display = "none";
-      saveBtn.disabled = false;
-    }
+  return {
+    element: modal,
+    close: closeModal,
   };
 }
 
-// Add click handler to the Add Mod button
-document.getElementById("addMod").addEventListener("click", addMods);
+function showAddModsModal() {
+  const modalControls = createModal("addModsModal");
 
-function deleteMod(index) {
-  const modId = mods[index].id;
+  // Add submit button handler
+  const submitButton = document.querySelector(
+    "#addModsModal .modal-button.submit",
+  );
+  if (submitButton) {
+    submitButton.onclick = function () {
+      const collectionInput = document.getElementById("collectionUrl");
+      const workshopInput = document.getElementById("workshopUrl");
+      const collectionInputUrl = collectionInput.value.trim();
+      const workshopInputUrl = workshopInput.value.trim();
 
-  if (confirm("Are you sure you want to delete this mod?")) {
-    // Find the DOM element for this mod
-    const modElement = document.querySelector(`.mod-item[data-id="${modId}"]`);
+      if (!collectionInputUrl && !workshopInputUrl) {
+        showNotification("Please enter a valid URL", "warning");
+        return;
+      }
+      if (collectionInputUrl && workshopInputUrl) {
+        showNotification("Please enter only one URL type", "warning");
+        return;
+      }
 
-    // Add the deleting class to start the animation
-    modElement.classList.add("moving");
+      try {
+        // Show spinner
+        showLoadingIndicator();
+        let loadingText = document.createElement("p");
+        loadingText.classList.add("loading-text");
+        let spinner = document.getElementById("globalLoader");
+        spinner.appendChild(loadingText);
+        submitButton.disabled = true;
 
-    modElement.classList.add("deleting");
+        const url = collectionInputUrl || workshopInputUrl;
+        const urlType = collectionInputUrl ? "collection" : "workshop";
 
-    // Wait for animation to complete before making the API call
-    setTimeout(() => {
-      fetch(`/api/mods/${modId}`, {
-        method: "DELETE",
-      })
-        .then((response) => {
-          if (response.ok) {
-            // Remove the mod from the array
-            mods.splice(index, 1);
-
-            // Update load_order for all remaining mods
-            mods.forEach((mod, index) => {
-              mod.load_order = index + 1;
-            });
-
-            saveMods();
-            renderMods();
-          } else {
-            throw new Error("Failed to delete mod");
-          }
+        fetch("/get_mods_from_url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url: url,
+            type: urlType,
+          }),
         })
-        .catch((error) => {
-          console.error("Error deleting mod:", error);
-          alert("Error deleting mod. Please check the console for details.");
-          // Remove the deleting class if there's an error
-          modElement.classList.remove("moving");
-          modElement.classList.remove("deleting");
-        });
-    }, 300); // Match this to your CSS transition duration
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(
+                `Server returned ${response.status}: ${response.statusText}`,
+              );
+            }
+            showNotification("Mods added successfully", "success");
+            loadMods();
+            renderMods;
+            modalControls.close();
+          })
+          .catch((error) => {
+            console.error("Error processing mods:", error);
+            showNotification(
+              "Failed to add mods. Please check the URL and try again.",
+              "error",
+            );
+          })
+          .finally(() => {
+            hideLoadingIndicator();
+            if (loadingText && spinner) {
+              spinner.removeChild(loadingText);
+            }
+            submitButton.disabled = false;
+          });
+      } catch (error) {
+        console.error("Error in mod processing setup:", error);
+        hideLoadingIndicator();
+        submitButton.disabled = false;
+        showNotification("An unexpected error occurred", "error");
+      }
+    };
+  }
+}
+// ====================== Utility Functions ======================
+
+/**
+ * Shows a loading indicator
+ */
+function showLoadingIndicator() {
+  isLoading = true;
+  const loader = document.getElementById("globalLoader");
+  if (loader) {
+    loader.style.display = "flex";
   }
 }
 
-document.getElementById("copyButton").addEventListener("click", function () {
-  const textarea = document.getElementById("configTextarea");
+/**
+ * Hides the loading indicator
+ */
+function hideLoadingIndicator() {
+  isLoading = false;
+  const loader = document.getElementById("globalLoader");
+  if (loader) {
+    loader.style.display = "none";
+  }
+}
 
-  // Create a temporary textarea element to copy text from without highlighting
-  const tempTextArea = document.createElement("textarea");
-  tempTextArea.value = textarea.value;
-  document.body.appendChild(tempTextArea);
+function showNotification(message, type = "info") {
+  const container =
+    document.getElementById("notification-container") ||
+    (() => {
+      const newContainer = document.createElement("div");
+      newContainer.id = "notification-container";
+      document.body.appendChild(newContainer);
+      return newContainer;
+    })();
 
-  tempTextArea.select();
-  document.execCommand("copy");
+  // // Remove existing notifications of the same type
+  // const existing = container.querySelectorAll(`.notification.${type}`);
+  // existing.forEach((el) => {
+  //   el.classList.remove("show");
+  //   setTimeout(() => el.remove(), 300);
+  // });
 
-  // Remove the temporary textarea
-  document.body.removeChild(tempTextArea);
+  const note = document.createElement("div");
+  note.className = `notification ${type}`;
+  note.textContent = message;
+  container.appendChild(note);
 
-  const icon = document.querySelector("#copyButton .material-symbols-outlined");
+  requestAnimationFrame(() => note.classList.add("show"));
 
-  // Apply shake effect and enlarge the icon
-  icon.classList.add("copied");
+  setTimeout(() => {
+    note.classList.remove("show");
+    setTimeout(() => note.remove(), 300);
+  }, 3000);
+}
 
-  // Reset after animation
-  setTimeout(function () {
-    icon.classList.remove("copied");
-  }, 1000); // Time duration of the animation
-});
+/**
+ * Confirms an action with the user
+ * @param {string} message - The confirmation message
+ * @returns {boolean} True if the user confirmed, false otherwise
+ */
+function confirmAction(message) {
+  return window.confirm(message); // TODO: either make bespoke or delete
+}
 
+// ====================== Initialize the Application ======================
+
+/**
+ * Initialize the app when the DOM is loaded
+ */
 document.addEventListener("DOMContentLoaded", function () {
-  fetch("/get_mods_config")
-    .then((response) => response.json())
-    .then((data) => {
-      const configContent = data.config_content;
+  // Load mods
+  loadMods();
 
-      const textarea = document.getElementById("configTextarea");
-      textarea.value = configContent;
+  // Set up event listeners
+  const searchInput = document.getElementById("modSearch");
+  if (searchInput) {
+    searchInput.addEventListener("input", handleSearch);
+  }
 
-      // Ensure that the textarea uses pre-wrap to show newlines correctly
-      textarea.style.whiteSpace = "pre-wrap";
+  const enabledFilter = document.getElementById("filterEnabled");
+  if (enabledFilter) {
+    enabledFilter.addEventListener("change", handleSearch);
+  }
 
-      // Keep pre-wrap for line wrapping while preserving line breaks
-      textarea.style.whiteSpace = "pre-wrap";
-    })
-    .catch((error) => {
-      console.error("Error fetching config content:", error);
-    });
+  const enableAllButton = document.getElementById("enableAllButton");
+  if (enableAllButton) {
+    enableAllButton.addEventListener("click", enableAllMods);
+  }
+
+  const disableAllButton = document.getElementById("disableAllButton");
+  if (disableAllButton) {
+    disableAllButton.addEventListener("click", disableAllMods);
+  }
+
+  const addModsButton = document.getElementById("addModsButton");
+  if (addModsButton) {
+    addModsButton.addEventListener("click", showAddModsModal);
+  }
+
+  const configButton = document.getElementById("configButton");
+  if (configButton) {
+    configButton.addEventListener("click", showConfigModal);
+  }
 });
-
-checkMissingModID();
-loadMods();

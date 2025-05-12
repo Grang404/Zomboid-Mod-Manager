@@ -21,12 +21,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   </head>
   <body>
+    <!-- Navbar -->
     <nav class="navbar">
       <h1 class="pacifico-regular">
         <a href="{{ url_for('index') }}">PZ Mod Manager</a>
       </h1>
       <div class="navbar-actions">
-        <button id="addMod">
+        <button id="addModsButton">
           Add Mods
           <i class="material-symbols-outlined"> add </i>
         </button>
@@ -34,73 +35,21 @@
           Update Config
           <i class="material-symbols-outlined"> description </i>
         </button>
-        <!--<button id="warningIcon">-->
-        <i id="warningIcon" class="material-symbols-outlined"> warning </i>
-        <!--</button>-->
       </div>
     </nav>
 
+    <!-- Loading Spinner -->
+    <div id="globalLoader" style="display: none">
+      <div class="fancy-spinner">
+        <div class="ring outer"></div>
+        <div class="ring inner"></div>
+        <div class="ring center"></div>
+      </div>
+      <p class="loading-text">Processing...</p>
+    </div>
     <div class="container">
       <div class="mod-list" id="modList">
         <!-- Mods will be inserted here by JavaScript -->
-      </div>
-    </div>
-
-    <!-- Config Modal -->
-    <div id="configModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Update Configuration</h2>
-          <span class="close-modal">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="file-upload-container">
-            <div class="file-upload-area" id="dropZone">
-              <span class="material-symbols-outlined upload-icon"
-                >upload_file</span
-              >
-              <p>Click to upload or drag and drop</p>
-              <span class="file-name" id="fileName">No file selected</span>
-              <input type="file" id="fileUpload" class="file-input" />
-            </div>
-          </div>
-
-          <div class="divider">
-            <span>OR</span>
-          </div>
-
-          <div class="config-textarea-container">
-            <textarea
-              id="configTextarea"
-              readonly
-              placeholder="Mod Info"
-            ></textarea>
-            <button id="copyButton" class="copy-button">
-              <span class="material-symbols-outlined">content_copy</span>
-            </button>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="modal-button cancel">Cancel</button>
-          <button class="modal-button save">Process Config</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Missing Mod IDs Modal-->
-    <div id="modIdsModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Mods with missing Mod ID's</h2>
-          <span class="material-symbols-outlined help-icon"> help </span>
-          <div id="tooltip">
-            Follow each URL to to the Steam workshop page.<br /><br />
-            Look for the Mod ID.<br /><br />
-            Copy and paste it into the text box for the given mod.
-          </div>
-          <span class="close-modal">&times;</span>
-        </div>
-        <div class="modal-body"></div>
       </div>
     </div>
 
@@ -109,6 +58,10 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>Add Mods</h2>
+          <span class="material-symbols-outlined help-icon">help</span>
+          <div id="tooltip" style="display: none">
+            This is the tooltip content.
+          </div>
           <span class="close-modal">&times;</span>
         </div>
         <div class="modal-body">
@@ -139,26 +92,13 @@
               required
             />
           </div>
-
-          <div
-            id="loadingSpinner"
-            class="spinner-container"
-            style="display: none"
-          >
-            <div class="fancy-spinner">
-              <div class="ring outer"></div>
-              <div class="ring inner"></div>
-              <div class="ring center"></div>
-            </div>
-            <p class="loading-text">Processing mods...</p>
-          </div>
         </div>
         <div class="modal-footer">
-          <button class="modal-button cancel">Cancel</button>
-          <button class="modal-button save">Submit</button>
+          <button class="modal-button submit">Submit</button>
         </div>
       </div>
     </div>
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </body>
 </html>
