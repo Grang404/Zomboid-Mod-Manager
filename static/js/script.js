@@ -1,4 +1,5 @@
 let mods = [];
+let subMods = [];
 let isLoading = false;
 
 // ====================== API Integration Functions ======================
@@ -23,10 +24,24 @@ async function getMods() {
   return data;
 }
 
+async function getSubMods() {
+  const response = await fetch("/api/submods");
+
+  if (!response.ok) {
+    throw new Error(
+      'Server returned ${response.status}: ${response.statusText}',
+    );
+  }
+
+  const data = await response.json();
+
+}
+
 async function loadMods() {
   try {
     showLoadingIndicator();
     mods = await getMods();
+    subMods = await getSubMods();
     renderMods();
   } catch (error) {
     console.error("Error loading mods:", error);
@@ -42,7 +57,7 @@ async function saveMods() {
       mod.load_order = index + 1;
     });
 
-    const modOrder = Array.from(document.querySelectorAll(".mod-item")).map(
+    const payload = Array.from(document.querySelectorAll(".mod-item")).map(
       (item, index) => ({
         id: parseInt(item.dataset.id),
         enabled: item.querySelector(".mod-checkbox").checked,
@@ -53,7 +68,7 @@ async function saveMods() {
     const response = await fetch("/api/mods", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(modOrder),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -69,6 +84,30 @@ async function saveMods() {
   }
 }
 
+async function saveSubMods() {
+  try {
+    const payload = subMods.map(({ mod_id, parent_mod_id, enabled }) => ({
+      mod_id,
+      parent_mod_id,
+      enabled,
+    }));
+
+    const response = await fetch("/api/mod_ids", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error("Error saving mod IDs:", error);
+    showNotification("Failed to save mod ID entries. Please try again.", "error");
+  } finally {
+    hideLoadingIndicator();
+  }
+}
 async function deleteMod(index) {
   const mod = mods[index];
   const modId = mod.id;
