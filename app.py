@@ -3,15 +3,12 @@ from flask import (
     render_template,
     jsonify,
     request,
-    send_from_directory,
     redirect,
     url_for,
-    send_file,
 )
 import sqlite3
 import os
 from mod_manager import ModManager
-from io import BytesIO
 
 mod_manager = ModManager()
 app = Flask(__name__)
@@ -26,11 +23,6 @@ def get_db_connection():
 @app.route("/")
 def index():
     return render_template("index.html")
-
-
-@app.route("/static/<path:path>")
-def send_static(path):
-    return send_from_directory("static", path)
 
 
 @app.route("/api/mods", methods=["GET"])
@@ -66,6 +58,9 @@ def update_mods():
     cursor = conn.cursor()
     try:
         mods = request.json
+        if mods is None:
+            return jsonify({"error": "Invalid or missing JSON in request body"}), 400
+
         for mod in mods:
             cursor.execute(
                 """
@@ -99,58 +94,98 @@ def delete_mod(id):
         conn.close()
 
 
-@app.route("/api/save_server_config", methods=["POST"])
-def save_server_ini():
+@app.route("/toggle_mod_id", methods=["POST"])
+def toggle_mod_id():
     data = request.get_json()
-    server_ini_content = data.get("server_ini")
+    mod_id_entry_id = data.get("mod_id_entry_id")
+    enabled = data.get("enabled")
+    parent_mod_id = data.get("parent_mod_id")
 
-    if server_ini_content:
-        mod_manager.save_server_ini(server_ini_content)  # Save server.ini content
-        return jsonify({"message": "Server.ini saved successfully!"}), 200
-    else:
-        return jsonify({"error": "No server.ini content provided."}), 400
-
-
-@app.route("/api/get_server_ini", methods=["GET"])
-def get_server_ini():
-    server_ini_content = (
-        mod_manager.get_server_ini()
-    )  # Retrieve saved server.ini content
-
-    if server_ini_content:
-        return jsonify({"server_ini": server_ini_content}), 200
-    else:
-        return jsonify({"message": "No server.ini found."}), 404
-
-
-@app.route("/api/process_config", methods=["POST"])
-def process_config():
-    if "config_file" not in request.files:
-        return "No file uploaded", 400
-
-    file = request.files["config_file"]
-    if file.filename == "":
-        return "No file selected", 400
-
+    # Process the data (for example, toggle the enabled state in the database)
     try:
-        # Read the uploaded file content
-        file_content = file.read().decode("utf-8")
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-        # Process the file using mod_manager
-        mod_manager = ModManager()
-        processed_content = mod_manager.add_mods_to_config(file_content)
-
-        # Create BytesIO object for the processed content
-        mem = BytesIO()
-        mem.write(processed_content.encode("utf-8"))
-        mem.seek(0)
-
-        return send_file(
-            mem, as_attachment=True, download_name="server.ini", mimetype="text/plain"
+        # Update the mod_id state in the database
+        cursor.execute(
+            """
+            UPDATE mod_id_entries
+            SET enabled = ?
+            WHERE id = ? AND parent_mod_id = ?
+            """,
+            (enabled, mod_id_entry_id, parent_mod_id),
         )
+        conn.commit()
+        conn.close()
+
+        return jsonify({"success": True})
 
     except Exception as e:
-        return str(e), 500
+        print(f"Error toggling mod ID: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/get_mod_ids/<int:mod_id>", methods=["GET"])
+def api_get_mod_ids(mod_id):
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT id, mod_id, enabled, parent_mod_id
+            FROM mod_id_entries
+            WHERE mod_id = ?
+            """,
+            (mod_id,),
+        )
+        mod_entry = cursor.fetchone()
+
+        if mod_entry:
+            mod_state = {
+                "mod_id": mod_entry["mod_id"],
+                "enabled": mod_entry["enabled"],
+                "parent_mod_id": mod_entry["parent_mod_id"],
+            }
+        else:
+            mod_state = {}
+
+    except Exception as e:
+        print(f"Error fetching mod ID state: {e}")
+        mod_state = {}
+
+    finally:
+        conn.close()
+
+    return jsonify({"mod_state": mod_state})
+
+
+@app.route("/update_mod_state/<int:mod_id>", methods=["POST"])
+def update_mod_state(mod_id):
+    request_data = request.get_json()
+    enabled = request_data.get("enabled")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            UPDATE mod_id_entries
+            SET enabled = ?
+            WHERE mod_id = ?
+            """,
+            (enabled, mod_id),
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Error updating mod state: {e}")
+        return jsonify({"error": "Failed to update mod state"}), 500
+    finally:
+        conn.close()
+
+    return jsonify({"message": "Mod state updated successfully"})
 
 
 @app.route("/get_mods_from_url", methods=["POST"])
@@ -175,42 +210,6 @@ def get_mods_from_url():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/update-mod-id", methods=["POST"])
-def update_mod_id():
-    try:
-        data = request.json
-        mod_id = data["mod_id"]
-        mod_id_to_update = data["id"]
-
-        # Connect to the DB and execute update
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute(
-            """
-            UPDATE mods
-            SET mod_ids = ?
-            WHERE id = ?
-        """,
-            (mod_id, mod_id_to_update),
-        )
-
-        conn.commit()
-        conn.close()
-
-        return jsonify({"message": "Mod ID updated successfully"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/get_mods_config")
-def get_mods_config():
-    """Fetch the config content for mods."""
-    config_content = mod_manager.get_mods_config()
-
-    return jsonify({"config_content": config_content})
 
 
 if __name__ == "__main__":

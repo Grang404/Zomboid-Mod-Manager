@@ -3,24 +3,30 @@ let isLoading = false;
 
 // ====================== API Integration Functions ======================
 
+async function getMods() {
+  const response = await fetch("/api/mods");
+
+  if (!response.ok) {
+    throw new Error(
+      `Server returned ${response.status}: ${response.statusText}`,
+    );
+  }
+
+  const data = await response.json();
+
+  if (!data || Object.keys(data).length === 0) {
+    showNotification("There are no mods to load 😢");
+  } else {
+    showNotification("Mods loaded successfully", "success");
+  }
+
+  return data;
+}
+
 async function loadMods() {
   try {
     showLoadingIndicator();
-    const response = await fetch("/api/mods");
-
-    if (!response.ok) {
-      throw new Error(
-        `Server returned ${response.status}: ${response.statusText}`,
-      );
-    }
-
-    mods = await response.json();
-
-    if (!mods || Object.keys(mods).length === 0) {
-      showNotification("There are no mods to load 😢");
-    } else {
-      showNotification("Mods loaded successfully", "success");
-    }
+    mods = await getMods();
     renderMods();
   } catch (error) {
     console.error("Error loading mods:", error);
@@ -112,39 +118,48 @@ async function deleteMod(index) {
   }
 }
 
+async function fetchModIds(modId) {
+  try {
+    const response = await fetch(`/get_mod_ids/${modId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.mod_ids || [];
+  } catch (error) {
+    console.error("Error fetching mod IDs:", error);
+    return [];
+  }
+}
+
 // ====================== UI Rendering ======================
 
 /**
  * Renders the mod list in the DOM
  */
+
 function renderMods() {
   mods.forEach((mod, index) => {
     mod.load_order = index + 1;
   });
-
   // Now sort by the newly updated load_order (this should maintain the current order)
   mods.sort((a, b) => a.load_order - b.load_order);
-
   const modList = document.getElementById("modList");
   if (!modList) return;
-
   // Apply any active filters
   const searchTerm =
     document.getElementById("modSearch")?.value?.toLowerCase() || "";
   const enabledFilter =
     document.getElementById("filterEnabled")?.checked || false;
-
   const filteredMods = mods.filter((mod) => {
     const matchesSearch = mod.title.toLowerCase().includes(searchTerm);
     const matchesEnabled = !enabledFilter || mod.enabled;
     return matchesSearch && matchesEnabled;
   });
-
   if (filteredMods.length === 0) {
     modList.innerHTML = `<div class="no-mods-message">No mods found matching your filters</div>`;
     return;
   }
-
   modList.innerHTML = filteredMods
     .map((mod, index) => {
       // Find the original index in the mods array
@@ -157,14 +172,49 @@ function renderMods() {
   const totalCounter = document.getElementById("totalModsCount");
   const filteredCounter = document.getElementById("filteredModsCount");
   const enabledCounter = document.getElementById("enabledModsCount");
-
   if (totalCounter) totalCounter.textContent = mods.length;
   if (filteredCounter) filteredCounter.textContent = filteredMods.length;
   if (enabledCounter)
     enabledCounter.textContent = mods.filter((mod) => mod.enabled).length;
-
   // Initialize sortable after rendering
   initializeSortable();
+}
+
+// After rendering, load and apply mod ID states
+function loadModIdStates() {
+  const modItems = document.querySelectorAll(".mod-item");
+
+  modItems.forEach((item) => {
+    const modId = item.dataset.id;
+    const detailsDiv = document.getElementById(`mod-details-${modId}`);
+
+    if (detailsDiv) {
+      fetch(`/get_mod_ids/${modId}`)
+        .then((response) => response.json())
+        .then((data) => {
+          const modIdEntries = data.mod_ids || [];
+          const modIdMap = {};
+
+          modIdEntries.forEach((entry) => {
+            modIdMap[entry.mod_id] = entry;
+          });
+
+          const modIdItems = detailsDiv.querySelectorAll(".mod-id-item");
+          modIdItems.forEach((idItem) => {
+            const modIdValue = idItem.dataset.modId;
+            const entry = modIdMap[modIdValue];
+
+            if (entry) {
+              const checkbox = idItem.querySelector(".mod-id-checkbox");
+              checkbox.checked = entry.enabled;
+              idItem.classList.toggle("disabled", !entry.enabled);
+              checkbox.dataset.entryId = entry.id;
+            }
+          });
+        })
+        .catch((error) => console.error("Error loading mod ID states:", error));
+    }
+  });
 }
 
 /**
@@ -232,25 +282,61 @@ function renderModItem(mod, index) {
         hasMultipleIds
           ? `<div class="mod-details" id="mod-details-${mod.id}" style="display: none;">
            <ul class="mod-id-list">
-
-             ${modIdArray
-               .map(
-                 (id) => `<p><label class="checkbox">
-                          <input type="checkbox" class="mod-checkbox" 
-                           ${mod.enabled ? "checked" : ""} 
-                           onchange="">
-              <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
-              <span class="material-symbols-outlined checked">check_box</span>
-            </label>
-${id}</p>`,
-               )
-               .join("")}
+            ${modIdArray
+              .map(
+                (id) => `<div class="mod-id-item"><p><label class="checkbox">
+                          <input type="checkbox" class="mod-checkbox"
+                            data-entry-id="${id}" 
+                            ${mod.enabled ? "checked" : ""} 
+                            onchange="">
+                          <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
+                          <span class="material-symbols-outlined checked">check_box</span>
+                        </label>
+                        ${id}</p></div>`,
+              )
+              .join("")}
            </ul>
          </div>`
           : ""
       }
   </div>
   `;
+}
+
+function toggleModIdState(checkbox, modId, parentModId) {
+  const modIdItem = checkbox.closest(".mod-id-item");
+  const entryId = checkbox.dataset.entryId; // Ensure this holds the correct entry ID
+  const enabled = checkbox.checked;
+
+  // Update UI immediately for better UX
+  modIdItem.classList.toggle("disabled", !enabled);
+
+  // Send to backend
+  fetch("/toggle_mod_id", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      mod_id_entry_id: entryId, // This is the ID of the mod entry you're toggling
+      enabled: enabled, // The new state of the mod (enabled/disabled)
+    }),
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      if (!result.success) {
+        // Revert UI if failed
+        checkbox.checked = !enabled;
+        modIdItem.classList.toggle("disabled", enabled);
+        console.error("Failed to toggle mod ID");
+      }
+    })
+    .catch((error) => {
+      // Revert UI on error
+      checkbox.checked = !enabled;
+      modIdItem.classList.toggle("disabled", enabled);
+      console.error("Error toggling mod ID:", error);
+    });
 }
 
 /**

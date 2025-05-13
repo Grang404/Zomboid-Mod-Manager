@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import sqlite3
 
 
@@ -96,7 +96,7 @@ class ModManager:
         if result:
             return result[0]
         else:
-            return None  # Return None if no server.ini is found
+            return None
 
     def add_mod_to_database(self, workshop_id, title, url, mod_ids, map_folders):
         """Add a mod to the database with its details."""
@@ -170,7 +170,7 @@ class ModManager:
             soup = BeautifulSoup(response.text, "html.parser")
             workshop_div = soup.find("div", {"class": "workshopItemDescription"})
 
-            if workshop_div:
+            if isinstance(workshop_div, Tag):
                 mod_ids = workshop_div.find_all(string=lambda text: "Mod ID:" in text)
                 return [
                     parts[1].strip()
@@ -187,7 +187,7 @@ class ModManager:
             soup = BeautifulSoup(response.text, "html.parser")
             map_folder_div = soup.find("div", {"class": "workshopItemDescription"})
 
-            if map_folder_div:
+            if isinstance(map_folder_div, Tag):
                 map_folders = map_folder_div.find_all(
                     string=lambda text: "Map Folder" in text
                 )
@@ -204,7 +204,7 @@ class ModManager:
         soup = BeautifulSoup(response.content, "html.parser")
         collection_children_div = soup.find("div", class_="collectionChildren")
 
-        if collection_children_div:
+        if isinstance(collection_children_div, Tag):
             links = collection_children_div.find_all("a")
             return list(
                 {
