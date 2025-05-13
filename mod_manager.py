@@ -34,7 +34,7 @@ class ModManager:
         # Normalized mod ID table
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS mod_id_entries (
+            CREATE TABLE IF NOT EXISTS submods (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 mod_id TEXT NOT NULL,
                 parent_mod_id INTEGER,
@@ -140,12 +140,12 @@ class ModManager:
                 (last_inserted_id, last_inserted_id),
             )
 
-            # Insert each mod_id into mod_id_entries
+            # Insert each mod_id into submods
             for mod_id in mod_ids:
                 mod_id = mod_id.strip()
                 if mod_id:  # skip empty
                     cursor.execute(
-                        "INSERT INTO mod_id_entries (mod_id, parent_mod_id, enabled) VALUES (?, ?, ?)",
+                        "INSERT INTO submods (mod_id, parent_mod_id, enabled) VALUES (?, ?, ?)",
                         (mod_id, last_inserted_id, True),
                     )
 

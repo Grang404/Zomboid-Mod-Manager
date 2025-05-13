@@ -79,6 +79,33 @@ def update_mods():
         conn.close()
 
 
+@app.route("/api/submods", methods=["post"])
+def update_submods():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        submods = request.json
+        if submods is None:
+            return jsonify({"error": "Invalid or missing JSON in request body"}), 400
+
+        for submod in submods:
+            cursor.execute(
+                """
+                UPDATE submods 
+                SET enabled = ? 
+                WHERE id = ?
+            """,
+                (submod["enabled"], submod["id"]),
+            )
+        conn.commit()
+        return jsonify({"message": "Changes saved successfully"})
+    except sqlite3.Error as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
 @app.route("/api/mods/<int:id>", methods=["DELETE"])
 def delete_mod(id):
     conn = get_db_connection()
@@ -92,100 +119,6 @@ def delete_mod(id):
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
-
-
-@app.route("/toggle_mod_id", methods=["POST"])
-def toggle_mod_id():
-    data = request.get_json()
-    mod_id_entry_id = data.get("mod_id_entry_id")
-    enabled = data.get("enabled")
-    parent_mod_id = data.get("parent_mod_id")
-
-    # Process the data (for example, toggle the enabled state in the database)
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Update the mod_id state in the database
-        cursor.execute(
-            """
-            UPDATE mod_id_entries
-            SET enabled = ?
-            WHERE id = ? AND parent_mod_id = ?
-            """,
-            (enabled, mod_id_entry_id, parent_mod_id),
-        )
-        conn.commit()
-        conn.close()
-
-        return jsonify({"success": True})
-
-    except Exception as e:
-        print(f"Error toggling mod ID: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/get_mod_ids/<int:mod_id>", methods=["GET"])
-def api_get_mod_ids(mod_id):
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            """
-            SELECT id, mod_id, enabled, parent_mod_id
-            FROM mod_id_entries
-            WHERE mod_id = ?
-            """,
-            (mod_id,),
-        )
-        mod_entry = cursor.fetchone()
-
-        if mod_entry:
-            mod_state = {
-                "mod_id": mod_entry["mod_id"],
-                "enabled": mod_entry["enabled"],
-                "parent_mod_id": mod_entry["parent_mod_id"],
-            }
-        else:
-            mod_state = {}
-
-    except Exception as e:
-        print(f"Error fetching mod ID state: {e}")
-        mod_state = {}
-
-    finally:
-        conn.close()
-
-    return jsonify({"mod_state": mod_state})
-
-
-@app.route("/update_mod_state/<int:mod_id>", methods=["POST"])
-def update_mod_state(mod_id):
-    request_data = request.get_json()
-    enabled = request_data.get("enabled")
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            """
-            UPDATE mod_id_entries
-            SET enabled = ?
-            WHERE mod_id = ?
-            """,
-            (enabled, mod_id),
-        )
-        conn.commit()
-    except Exception as e:
-        print(f"Error updating mod state: {e}")
-        return jsonify({"error": "Failed to update mod state"}), 500
-    finally:
-        conn.close()
-
-    return jsonify({"message": "Mod state updated successfully"})
 
 
 @app.route("/get_mods_from_url", methods=["POST"])

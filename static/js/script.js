@@ -29,19 +29,24 @@ async function getSubMods() {
 
   if (!response.ok) {
     throw new Error(
-      'Server returned ${response.status}: ${response.statusText}',
+      `Server returned ${response.status}: ${response.statusText}`,
     );
   }
 
   const data = await response.json();
 
+  if (!data || Object.keys(data).length === 0) {
+    showNotification("There are no mods to load 😢");
+  } else {
+    return data;
+  }
 }
 
 async function loadMods() {
   try {
     showLoadingIndicator();
     mods = await getMods();
-    subMods = await getSubMods();
+    // subMods = await getSubMods();
     renderMods();
   } catch (error) {
     console.error("Error loading mods:", error);
@@ -86,28 +91,41 @@ async function saveMods() {
 
 async function saveSubMods() {
   try {
-    const payload = subMods.map(({ mod_id, parent_mod_id, enabled }) => ({
-      mod_id,
-      parent_mod_id,
-      enabled,
-    }));
+    const payload = Array.from(document.querySelectorAll(".submod-item")).map(
+      (item) => {
+        const checkbox = item.querySelector(".submod-checkbox");
+        const submodId = parseInt(item.dataset.id);
+        const submod = subMods.find((s) => s.mod_id === submodId);
 
-    const response = await fetch("/api/mod_ids", {
+        return {
+          parent_mod_id: submod?.parent_mod_id ?? null,
+          enabled: checkbox.checked,
+        };
+      },
+    );
+
+    const response = await fetch("/api/submods", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      throw new Error(
+        `Server returned ${response.status}: ${response.statusText}`,
+      );
     }
   } catch (error) {
-    console.error("Error saving mod IDs:", error);
-    showNotification("Failed to save mod ID entries. Please try again.", "error");
+    console.error("Error saving submods:", error);
+    showNotification(
+      "Failed to save submod changes. Please try again.",
+      "error",
+    );
   } finally {
     hideLoadingIndicator();
   }
 }
+// TODO: Delete submod in db as well but doesn't really matter for it to work
 async function deleteMod(index) {
   const mod = mods[index];
   const modId = mod.id;
@@ -157,20 +175,6 @@ async function deleteMod(index) {
   }
 }
 
-async function fetchModIds(modId) {
-  try {
-    const response = await fetch(`/get_mod_ids/${modId}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.mod_ids || [];
-  } catch (error) {
-    console.error("Error fetching mod IDs:", error);
-    return [];
-  }
-}
-
 // ====================== UI Rendering ======================
 
 /**
@@ -178,82 +182,18 @@ async function fetchModIds(modId) {
  */
 
 function renderMods() {
-  mods.forEach((mod, index) => {
-    mod.load_order = index + 1;
-  });
-  // Now sort by the newly updated load_order (this should maintain the current order)
+  // Sort mods based on their load order (if applicable)
   mods.sort((a, b) => a.load_order - b.load_order);
+
   const modList = document.getElementById("modList");
   if (!modList) return;
-  // Apply any active filters
-  const searchTerm =
-    document.getElementById("modSearch")?.value?.toLowerCase() || "";
-  const enabledFilter =
-    document.getElementById("filterEnabled")?.checked || false;
-  const filteredMods = mods.filter((mod) => {
-    const matchesSearch = mod.title.toLowerCase().includes(searchTerm);
-    const matchesEnabled = !enabledFilter || mod.enabled;
-    return matchesSearch && matchesEnabled;
-  });
-  if (filteredMods.length === 0) {
-    modList.innerHTML = `<div class="no-mods-message">No mods found matching your filters</div>`;
-    return;
-  }
-  modList.innerHTML = filteredMods
-    .map((mod, index) => {
-      // Find the original index in the mods array
-      const originalIndex = mods.findIndex((m) => m.id === mod.id);
-      return renderModItem(mod, originalIndex);
-    })
+
+  // Render all mods (no filters or search for now)
+  modList.innerHTML = mods
+    .map((mod) => renderModItem(mod)) // Just pass the mod object, no need for index
     .join("");
 
-  // Update counter
-  const totalCounter = document.getElementById("totalModsCount");
-  const filteredCounter = document.getElementById("filteredModsCount");
-  const enabledCounter = document.getElementById("enabledModsCount");
-  if (totalCounter) totalCounter.textContent = mods.length;
-  if (filteredCounter) filteredCounter.textContent = filteredMods.length;
-  if (enabledCounter)
-    enabledCounter.textContent = mods.filter((mod) => mod.enabled).length;
-  // Initialize sortable after rendering
   initializeSortable();
-}
-
-// After rendering, load and apply mod ID states
-function loadModIdStates() {
-  const modItems = document.querySelectorAll(".mod-item");
-
-  modItems.forEach((item) => {
-    const modId = item.dataset.id;
-    const detailsDiv = document.getElementById(`mod-details-${modId}`);
-
-    if (detailsDiv) {
-      fetch(`/get_mod_ids/${modId}`)
-        .then((response) => response.json())
-        .then((data) => {
-          const modIdEntries = data.mod_ids || [];
-          const modIdMap = {};
-
-          modIdEntries.forEach((entry) => {
-            modIdMap[entry.mod_id] = entry;
-          });
-
-          const modIdItems = detailsDiv.querySelectorAll(".mod-id-item");
-          modIdItems.forEach((idItem) => {
-            const modIdValue = idItem.dataset.modId;
-            const entry = modIdMap[modIdValue];
-
-            if (entry) {
-              const checkbox = idItem.querySelector(".mod-id-checkbox");
-              checkbox.checked = entry.enabled;
-              idItem.classList.toggle("disabled", !entry.enabled);
-              checkbox.dataset.entryId = entry.id;
-            }
-          });
-        })
-        .catch((error) => console.error("Error loading mod ID states:", error));
-    }
-  });
 }
 
 /**
@@ -262,7 +202,7 @@ function loadModIdStates() {
  * @param {number} index - The index of the mod in the mods array
  * @returns {string} HTML string for the mod item
  */
-function renderModItem(mod, index) {
+function renderModItem(mod, index, subindex) {
   // Parse mod_ids into an array
   const modIdArray = mod.mod_ids
     ? mod.mod_ids
@@ -320,14 +260,14 @@ function renderModItem(mod, index) {
       ${
         hasMultipleIds
           ? `<div class="mod-details" id="mod-details-${mod.id}" style="display: none;">
-           <ul class="mod-id-list">
+           <ul class="submod-list">
             ${modIdArray
               .map(
-                (id) => `<div class="mod-id-item"><p><label class="checkbox">
-                          <input type="checkbox" class="mod-checkbox"
+                (id) => `<div class="submod-item"><p><label class="checkbox">
+                          <input type="checkbox" class="submod-checkbox"
                             data-entry-id="${id}" 
-                            ${mod.enabled ? "checked" : ""} 
-                            onchange="">
+                            ${subMods.enabled ? "checked" : "checked"} 
+                            onchange="toggleSubmod(${subindex})">
                           <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
                           <span class="material-symbols-outlined checked">check_box</span>
                         </label>
@@ -340,42 +280,6 @@ function renderModItem(mod, index) {
       }
   </div>
   `;
-}
-
-function toggleModIdState(checkbox, modId, parentModId) {
-  const modIdItem = checkbox.closest(".mod-id-item");
-  const entryId = checkbox.dataset.entryId; // Ensure this holds the correct entry ID
-  const enabled = checkbox.checked;
-
-  // Update UI immediately for better UX
-  modIdItem.classList.toggle("disabled", !enabled);
-
-  // Send to backend
-  fetch("/toggle_mod_id", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      mod_id_entry_id: entryId, // This is the ID of the mod entry you're toggling
-      enabled: enabled, // The new state of the mod (enabled/disabled)
-    }),
-  })
-    .then((response) => response.json())
-    .then((result) => {
-      if (!result.success) {
-        // Revert UI if failed
-        checkbox.checked = !enabled;
-        modIdItem.classList.toggle("disabled", enabled);
-        console.error("Failed to toggle mod ID");
-      }
-    })
-    .catch((error) => {
-      // Revert UI on error
-      checkbox.checked = !enabled;
-      modIdItem.classList.toggle("disabled", enabled);
-      console.error("Error toggling mod ID:", error);
-    });
 }
 
 /**
@@ -416,11 +320,25 @@ function toggleMod(index) {
       modItem.classList.remove("enabled");
     }
   }
+}
 
-  // Update counter
-  const enabledCounter = document.getElementById("enabledModsCount");
-  if (enabledCounter) {
-    enabledCounter.textContent = mods.filter((mod) => mod.enabled).length;
+function toggleSubmod(index) {
+  subMods[index].enabled = !subMods[index].enabled;
+  saveSubMods();
+
+  const submodItem = document.querySelector(
+    `.submod-item[data-id="${subMods[index].mod_id}"]`,
+  );
+  if (submodItem) {
+    if (subMods[index].enabled) {
+      submodItem.classList.add("enabled");
+      submodItem.classList.remove("disabled");
+    } else {
+      submodItem.classList.add("disabled");
+      submodItem.classList.remove("enabled");
+    }
+  } else {
+    console.log("submodItem not found");
   }
 }
 
@@ -469,22 +387,12 @@ function moveModDown(index) {
 /**
  * TODO: Implement this
  */
-function enableAllMods() {
-  mods.forEach((mod) => (mod.enabled = true));
-  saveMods();
-  renderMods();
-  showNotification("All mods enabled", "success");
-}
+function enableAllMods() {}
 
 /**
  * TODO: Implement this
  */
-function disableAllMods() {
-  mods.forEach((mod) => (mod.enabled = false));
-  saveMods();
-  renderMods();
-  showNotification("All mods disabled", "success");
-}
+function disableAllMods() {}
 
 /**
  * Initializes sortable functionality for the mod list
@@ -531,10 +439,6 @@ function initializeSortable() {
   });
 }
 
-/**
- * Handles wheel events during drag operations
- * @param {Event} e - The wheel event
- */
 function handleWheel(e) {
   e.preventDefault();
   const modList = document.getElementById("modList");
@@ -543,25 +447,15 @@ function handleWheel(e) {
   }
 }
 
-/**
- * Handles the search functionality
- */
 function handleSearch() {
   renderMods();
 }
 
-/**
- * Creates and manages a modal dialog
- * @param {string} id - The ID of the modal element
- * @returns {Object} Modal control object
- */
 function createModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return null;
   const closeBtn = modal.querySelector(".close-modal");
-  // Show modal
   modal.style.display = "block";
-  // Close modal function
   function closeModal() {
     modal.style.display = "none";
     // Reset form fields
@@ -570,9 +464,7 @@ function createModal(id) {
     );
     inputs.forEach((input) => (input.value = ""));
   }
-  // Close button events
   if (closeBtn) closeBtn.onclick = closeModal;
-  // Close modal when clicking outside
   window.onclick = function (event) {
     if (event.target === modal) {
       closeModal();
@@ -587,7 +479,6 @@ function createModal(id) {
 function showAddModsModal() {
   const modalControls = createModal("addModsModal");
 
-  // Add submit button handler
   const submitButton = document.querySelector(
     "#addModsModal .modal-button.submit",
   );
@@ -608,7 +499,6 @@ function showAddModsModal() {
       }
 
       try {
-        // Show spinner
         showLoadingIndicator();
         let loadingText = document.createElement("p");
         loadingText.classList.add("loading-text");
@@ -663,11 +553,9 @@ function showAddModsModal() {
     };
   }
 }
+
 // ====================== Utility Functions ======================
 
-/**
- * Shows a loading indicator
- */
 function showLoadingIndicator() {
   isLoading = true;
   const loader = document.getElementById("globalLoader");
@@ -676,9 +564,6 @@ function showLoadingIndicator() {
   }
 }
 
-/**
- * Hides the loading indicator
- */
 function hideLoadingIndicator() {
   isLoading = false;
   const loader = document.getElementById("globalLoader");
@@ -697,7 +582,7 @@ function showNotification(message, type = "info") {
       return newContainer;
     })();
 
-  // // Remove existing notifications of the same type
+  // Remove existing notifications of the same type
   // const existing = container.querySelectorAll(`.notification.${type}`);
   // existing.forEach((el) => {
   //   el.classList.remove("show");
@@ -717,13 +602,9 @@ function showNotification(message, type = "info") {
   }, 3000);
 }
 
-/**
- * Confirms an action with the user
- * @param {string} message - The confirmation message
- * @returns {boolean} True if the user confirmed, false otherwise
- */
+// TODO: either make bespoke or delete
 function confirmAction(message) {
-  return window.confirm(message); // TODO: either make bespoke or delete
+  return window.confirm(message);
 }
 
 // ====================== Initialize the Application ======================
@@ -732,7 +613,6 @@ function confirmAction(message) {
  * Initialize the app when the DOM is loaded
  */
 document.addEventListener("DOMContentLoaded", function () {
-  // Load mods
   loadMods();
 
   // Set up event listeners
