@@ -15,6 +15,7 @@ class ModManager:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
 
+        # Main mod table
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS mods (
@@ -26,6 +27,19 @@ class ModManager:
                 map_folders TEXT,
                 load_order INTEGER,
                 enabled BOOLEAN DEFAULT 1
+            )
+        """
+        )
+
+        # Normalized mod ID table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS mod_id_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mod_id TEXT NOT NULL,
+                parent_mod_id INTEGER,
+                enabled BOOLEAN DEFAULT 1,
+                FOREIGN KEY(parent_mod_id) REFERENCES mods(id) ON DELETE CASCADE
             )
         """
         )
@@ -125,6 +139,15 @@ class ModManager:
                 "UPDATE mods SET load_order = ? WHERE id = ?",
                 (last_inserted_id, last_inserted_id),
             )
+
+            # Insert each mod_id into mod_id_entries
+            for mod_id in mod_ids:
+                mod_id = mod_id.strip()
+                if mod_id:  # skip empty
+                    cursor.execute(
+                        "INSERT INTO mod_id_entries (mod_id, parent_mod_id, enabled) VALUES (?, ?, ?)",
+                        (mod_id, last_inserted_id, True),
+                    )
 
         conn.commit()
         conn.close()
@@ -346,23 +369,6 @@ class ModManager:
         config_content += f"Map={map_names_string}\n"
 
         return config_content
-
-    def list_mods(self):
-        """List all mods in the database."""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM mods")
-        rows = cursor.fetchall()
-        conn.close()
-
-        for row in rows:
-            print(f"Mod #{row[0]}")
-            print(f"  Workshop ID: {row[1]}")
-            print(f"  Title:       {row[2]}")
-            print(f"  URL:         {row[3]}")
-            print(f"  Mod IDs:     {row[4]}")
-            print(f"  Map Folders: {row[5]}")
-            print("-" * 50)
 
     def clear_database(self):
         """Delete all mods from the database."""

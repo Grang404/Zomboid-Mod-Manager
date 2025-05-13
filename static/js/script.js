@@ -32,7 +32,6 @@ async function loadMods() {
 
 async function saveMods() {
   try {
-    // Update load_order for all mods before saving
     mods.forEach((mod, index) => {
       mod.load_order = index + 1;
     });
@@ -232,11 +231,21 @@ function renderModItem(mod, index) {
       ${
         hasMultipleIds
           ? `<div class="mod-details" id="mod-details-${mod.id}" style="display: none;">
-           <h4>Mod IDs (${modIdArray.length}):</h4>
            <ul class="mod-id-list">
-             ${modIdArray.map((id) => `<li>${id}</li>`).join("")}
+
+             ${modIdArray
+               .map(
+                 (id) => `<p><label class="checkbox">
+                          <input type="checkbox" class="mod-checkbox" 
+                           ${mod.enabled ? "checked" : ""} 
+                           onchange="">
+              <span class="material-symbols-outlined unchecked">check_box_outline_blank</span>
+              <span class="material-symbols-outlined checked">check_box</span>
+            </label>
+${id}</p>`,
+               )
+               .join("")}
            </ul>
-           <div class="workshop-id">Workshop ID: ${mod.workshop_id || "N/A"}</div>
          </div>`
           : ""
       }
@@ -366,7 +375,7 @@ function initializeSortable() {
   window.sortable = new Sortable(modList, {
     animation: 150,
     handle: ".mod-item",
-    filter: ".checkbox, .delete-mod",
+    filter: ".checkbox, .delete-mod, .toggle-details",
     dragClass: "dragging",
     forceFallback: true,
     scroll: true,

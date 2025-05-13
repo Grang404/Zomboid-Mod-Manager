@@ -197,7 +197,11 @@ a:active {
 	background: var(--surface1);
 }
 
+
 .mod-item {
+	display: flex;
+	flex-wrap: wrap;
+	position: relative;
 	background: var(--surface0);
 	transition: background-color 0.2s;
 	padding: 12px;
@@ -214,6 +218,7 @@ a:active {
 	align-items: center;
 	gap: 8px;
 	min-width: 80px;
+	margin-bottom: 5px;
 }
 
 .mod-order {
@@ -276,40 +281,77 @@ a:active {
 	margin-right: 12px;
 }
 
-/* VIBE CODED */
-/* Toggle button */
-.toggle-details {
-	background: none;
-	border: none;
-	cursor: pointer;
-	padding: 4px;
-	margin-left: 8px;
-	display: flex;
-	align-items: center;
-	transition: transform 0.3s ease;
+.mod-details {
+	background-color: var(--mantle);
+	border-radius: 4px;
+	/* margin-left: 80px; */
+	/* margin-right: 1400px; */
+	width: 100%;
+	padding: 10px;
+	border-left: 3px solid var(--pink);
+	box-sizing: border-box;
+	clear: both;
+	display: none;
 }
 
-/* Optional rotation for arrow icon when expanded */
-.toggle-details.open span {
+.mod-id-list {
+	padding-left: 0;
+	margin: 5px 0;
+	color: var(--text);
+}
+
+.mod-id-list p {
+	display: flex;
+	align-items: center;
+	margin: 5px 0;
+}
+
+.mod-id-list .checkbox {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 8px;
+}
+
+/* Update HTML structure for better alignment */
+.mod-id-list label.checkbox+span.mod-id-text {
+	flex: 1;
+}
+
+.mod-details h4 {
+	margin-top: 0;
+	margin-bottom: 8px;
+}
+
+
+.mod-id-list {
+	padding-left: 20px;
+	margin: 5px 0;
+}
+
+.toggle-details span {
+	transition: transform 0.2s ease;
+}
+
+.toggle-details.active span {
 	transform: rotate(180deg);
 }
 
-/* Mod details container with transition */
-.mod-details {
-	overflow: hidden;
-	max-height: 0;
-	opacity: 0;
-	transition: max-height 0.4s ease, opacity 0.4s ease;
+.mod-id-list {
+	margin: 5px 0;
+	padding-left: 20px;
 }
 
-/* Expanded state */
-.mod-details.show {
-	max-height: 500px;
-	/* Adjust based on expected content height */
-	opacity: 1;
+.mod-id-list li {
+	margin-bottom: 3px;
 }
 
-/* ------------------- */
+.workshop-id {
+	margin-top: 8px;
+	font-style: italic;
+	color: #666;
+}
 
 .checkbox {
 	position: relative;
